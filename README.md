@@ -1,89 +1,207 @@
-# Image Catalog (Assignment Question 1)
+# Image Catalog
 
-A local image catalog for object detection, editable metadata, manual corrections, and composites made from existing catalog assets. This repository implements Question 1 only; it does not implement the separate duplicate-question assignment.
+A local web application for **Image Catalog, Object Detection, Metadata, and Composite Image Generation**. It provides a reusable image catalog, automatic object detection, editable object metadata with provenance, and a composition workflow that can reuse existing catalog assets.
+
+The central constraint is that the default **Assets** composition mode uses catalog pixels for requested objects. It reports missing assets instead of silently substituting generated lookalikes. Separate Hybrid and Pure AI modes are available when synthetic pixels are explicitly wanted.
+
+## Project objectives
+
+1. Store uploaded images and useful metadata in a searchable catalog.
+2. Detect objects in both illustrated and photographic images, and store labels, colors, confidence, boxes, dimensions, and detection status.
+3. Let a user correct missed or incorrect detections. Manual edits remain authoritative until detection is explicitly rerun.
+4. Create a new composite catalog entry from a natural-language request and existing image assets, including layout, scaling, layering, and object metadata.
+5. Demonstrate detection success and failure, manual correction, correction persistence, and asset-based composition with the supplied synthetic assignment images.
 
 ## Features
 
-- Upload and catalog images with dimensions, format, hash, detection status, route, timing, and provenance.
-- Detect the assignment's illustrated shapes, colors, fruit, and people with the classical OpenCV pipeline. Optional neural backends support photographs and open-vocabulary prompts.
-- Add, edit, remove, restore, confirm, and revert detected objects. Corrections persist until detection is explicitly rerun.
-- Compose new catalog entries from detected or manually corrected catalog cut-outs. Missing requested assets are reported instead of being silently replaced.
-- Optional hybrid and AI-generated image modes use the configured image generator; generated outputs are added to the catalog and detection runs on them.
-- Edit images with crop, resize, rotate, flip, color adjustments, object operations, background blur, solid-color background replacement, and optional AI cut-out.
-- Trash and restore catalog images and objects.
+### Catalog and metadata
 
-## Requirements and setup
+- Upload images or load the sample catalog generated for the assignment.
+- Browse, search, preview, and inspect images and their detected objects.
+- Store image dimensions, format, byte size, content hash, detection status, detector route, timing, dominant colors, timestamps, and provenance.
+- Edit display name, description, and tags.
+- Export per-image metadata as JSON.
+- Move images and objects to Trash, restore them, or permanently purge them.
 
-Python 3.10 or newer is recommended. Install the base dependencies and generate the assignment test images:
+### Detection and review
 
-```bash
-python -m venv .venv
-# Activate the environment, then:
-pip install -r requirements.txt
-python scripts/make_testdata.py
-python scripts/fetch_assets.py   # optional YOLOX weights for photograph detection
-uvicorn app.api:app --port 8000
+- Use classical OpenCV color and geometry rules for flat illustrations, including the assignment's shapes, color swatches, fruit, and cartoon people.
+- Use optional neural and open-vocabulary models for photographs and concepts outside the built-in rules.
+- Display object masks, boxes, confidence, color, and provenance in the UI.
+- Manually draw a missed object's box, add it to the catalog, edit an object's label/color/confidence/bounds, confirm a detection, delete or restore it, or revert an edit to the original automatic values.
+- Explicitly rerun detection in either `preserve_manual` mode (refresh untouched automatic results while keeping user corrections) or `replace_all` mode (replace all current detections).
+
+### Image editing
+
+- Crop, resize, rotate, flip, and adjust image colors.
+- Recolor, cut out, erase, or crop to a selected object.
+- Blur the background or replace it with a solid color.
+- Remove the background with the optional `rembg` U²-Net model; segmentation has local matte/GrabCut/box fallbacks.
+- Edits normally create a new catalog entry; the UI also provides a replace option for supported operations.
+
+### Composition and image generation
+
+- **Assets:** parse a natural-language instruction, match requested objects against catalog detections/corrections, lay out the cut-outs, render a composite, and save it as a new catalog image with provenance and object boxes.
+- **Hybrid:** combine catalog assets with generated scene/background content where supported by the planner and generator.
+- **Pure AI:** generate a complete image from a prompt. The generated image is saved to the catalog and detection is run on it.
+- Optional Gemini-assisted prompt planning can identify objects, counts, colors, positions, relationships, and generation mode. The deterministic parser remains available without a Gemini key.
+
+## Models and where they are used
+
+| Model or method | Used for | Why it is included | Availability |
+|---|---|---|---|
+| Classical OpenCV rules | Flat illustrations and the provided assignment set | Color regions and shape geometry are predictable on clean drawings; results are fast, local, and explainable | Included in the base project; not a trained ML model |
+| **YOLOX-nano** (COCO, 80 classes; ONNX) | Neural proposals and corroboration, mainly for photographs | Small model that runs through OpenCV DNN without PyTorch or a GPU; adds common real-world object classes | Optional weights at `models/yolox_nano.onnx`; run `python scripts/fetch_assets.py` to download |
+| **YOLO-World v2** (default `yolov8s-worldv2.pt`) | Open-vocabulary object proposals during normal detection when Ultralytics is installed; additional labels may be used on explicit re-detection | Text-promptable detector can search for concepts beyond COCO's fixed 80 classes | Model file is present at the repository root. Requires `ultralytics`; can be disabled with `YOLOWORLD=off` or changed with `YOLOWORLD_MODEL` |
+| **OWLv2** (`google/owlv2-base-patch16-ensemble`) | Optional text-guided proposal source in detection and benchmarking | Offers a separate open-vocabulary detector implementation for user-supplied concepts | Optional; requires `torch` and `transformers`. Weights may be downloaded on first use or configured with `OPENVOCAB_MODEL`; disable with `OPENVOCAB=off` |
+| **Gemini Flash** (planner default `gemini-2.5-flash`) | Optional natural-language planning and interpretation | Turns freer instructions into a structured plan; the Assets resolver still validates every requested object against the catalog | Requires `google-genai` and `GEMINI_API_KEY` (or `GOOGLE_API_KEY`). Local parsing is used when unavailable |
+| **Gemini image models** (`gemini-3.1-flash-image`, `gemini-2.5-flash-image`, `gemini-3-pro-image`; then Imagen 3 fallback) | Pure AI and supported hybrid generation | Creates new scene pixels when the user chooses a generation mode that allows them | Requires the Google GenAI SDK and a working API key/model entitlement |
+| **Pollinations Flux** | Secondary image-generation fallback | Gives the generator another remote provider attempt if Google image generation fails | Uses network access; no local model installation |
+| Local semantic raster synthesizer | Final image-generation fallback | Keeps the generation flow usable without a successful remote provider | Pillow/OpenCV procedural drawing; not equivalent to a general-purpose diffusion model |
+| **rembg U²-Net** | Optional automatic foreground cut-out | Produces a foreground mask for background removal | Optional dependency; falls back to classical segmentation methods |
+| GrabCut, Lab matte, and box masks | Segmentation fallback and object masks | Local methods provide usable masks when neural segmentation is absent or unsuitable | OpenCV-based fallback methods |
+
+The benchmark evaluates the bundled synthetic ground-truth images. YOLO-World and OWLv2 receive a fixed generic vocabulary, not labels from the ground truth. A backend without its required dependencies/model is reported as unavailable; its zero metrics are not a performance measurement. The benchmark is not representative of general real-world accuracy.
+
+## Project directory
+
+```text
+Image_Catalog/
+├── app/                       # Application and processing modules
+│   ├── api.py                 # FastAPI routes and validation
+│   ├── catalog.py             # SQLite/filesystem storage, metadata, corrections, audit log
+│   ├── detector.py            # Detection routing and result merging
+│   ├── neural.py              # YOLOX-nano ONNX/OpenCV DNN backend
+│   ├── yoloworld.py           # Ultralytics YOLO-World backend
+│   ├── openvocab.py           # Optional OWLv2 backend
+│   ├── segmentation.py        # U²-Net, matte, GrabCut and box masks
+│   ├── colors.py              # Color naming helpers
+│   ├── imageops.py            # Image edits and background operations
+│   ├── compose.py             # Prompt parsing, asset matching, layout and rendering
+│   ├── planner.py             # Gemini planner and heuristic fallback
+│   ├── generator.py           # Google, Pollinations and local image generation
+│   └── evaluate.py            # Ground-truth evaluation and model benchmark
+├── data/
+│   ├── testset/               # Generated assignment images and ground_truth.json
+│   └── store/                 # Runtime catalog database and image files (ignored by Git)
+├── docs/                      # UI screenshots and documentation assets
+├── examples/                  # Demonstration outputs and RESULTS.md
+├── models/                    # Optional YOLOX ONNX weights
+├── yolov8s-worldv2.pt          # YOLO-World v2 weights used by Ultralytics
+├── scripts/
+│   ├── make_testdata.py       # Generate assignment sample images and ground truth
+│   ├── fetch_assets.py        # Download YOLOX-nano ONNX weights
+│   ├── demo.py                # Generate example outputs
+│   └── ui_smoke.py            # Browser smoke checks (Playwright)
+├── static/
+│   └── index.html             # Single-page web interface
+├── tests/                     # Pytest coverage for API, catalog, detection, features, composition
+├── weights/clip/               # Bundled ViT-B/32 checkpoint; not currently loaded by app modules
+├── .env                       # Local secrets/configuration; ignored by Git
+├── requirements.txt           # Base Python dependencies
+├── requirements-openvocab.txt # Optional OWLv2 dependencies
+└── test_model.py              # Standalone Gemini image-generation experiment
 ```
 
-Open http://localhost:8000 and choose **Load sample catalog**. The catalog is stored under `data/store/` by default. To use a separate store, create the app with a custom data directory in Python.
+`data/store/`, `.env`, and generated Python caches are ignored by Git. The YOLO-World `.pt` file is separate from the optional YOLOX `.onnx` download.
+`test_model.py` is an isolated, network-calling Gemini image-generation experiment (it writes `test_generated.png`); it is not part of the application startup flow.
 
-Optional model/API credentials belong in environment variables (or a local `.env` file loaded by your runtime). `.env` is ignored by Git. Never commit credentials. The Gemini planner uses `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) and defaults to `gemini-2.5-flash`. AI generation and optional segmentation have their own provider/dependency requirements; the offline fallback behavior is described by their modules and configured at runtime. There is no API endpoint for saving secrets.
+## Installation and run
 
-Optional open-vocabulary detection:
+### Windows PowerShell
+
+```powershell
+py -3 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python scripts/make_testdata.py
+python scripts/fetch_assets.py   # optional: YOLOX-nano for photographs
+uvicorn app.api:app --host 127.0.0.1 --port 8000
+```
+
+Open <http://127.0.0.1:8000> and use **Load sample catalog**. The application stores its local catalog in `data/store/`.
+
+### macOS or Linux
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+python scripts/make_testdata.py
+python scripts/fetch_assets.py   # optional: YOLOX-nano for photographs
+uvicorn app.api:app --host 127.0.0.1 --port 8000
+```
+
+### Optional model setup
+
+YOLO-World is enabled when the `ultralytics` package and model weights are available. The repository includes `yolov8s-worldv2.pt`; install Ultralytics if it is not already present in your environment:
+
+```bash
+pip install ultralytics
+```
+
+OWLv2 can be added separately:
 
 ```bash
 pip install -r requirements-openvocab.txt
-# YOLO-World is enabled when ultralytics and its configured weights are available.
-# OWLv2 can be enabled with torch + transformers; first use may need model download access.
 ```
 
-## Run and evaluate
+Gemini planner and image generation use the Google GenAI SDK:
+
+```bash
+pip install google-genai
+```
+
+The standalone experiment can be invoked with `python test_model.py` after setting a valid Gemini key. It sends an image-generation request to Google and writes `test_generated.png` in the project root.
+
+U²-Net cut-out can use `rembg` when installed:
+
+```bash
+pip install rembg
+```
+
+### API keys
+
+For Gemini planning/image generation, set `GEMINI_API_KEY` or `GOOGLE_API_KEY` in the process environment, or put it in a local `.env` file. Example `.env` entry (replace the placeholder locally; never commit a real key):
+
+```text
+GEMINI_API_KEY=YOUR_KEY_HERE
+```
+
+The application does not provide an endpoint for writing or retrieving API keys. Do not expose this local development server to an untrusted network; it has no authentication or multi-user isolation.
+
+## Tests, demo, and benchmark
 
 ```bash
 pytest
-python scripts/ui_smoke.py       # optional; requires Playwright
-python scripts/demo.py           # regenerate examples and evidence
-python -m app.evaluate           # detector metrics on the generated ground-truth set
+python -m app.evaluate
+python scripts/demo.py
 ```
 
-The benchmark compares hybrid, classical, YOLO-World, and OWLv2. Open-vocabulary models receive a fixed generic vocabulary, never labels taken from the ground truth. A model without its required package or weights is marked unavailable; its zero metrics are not a measured performance result. This synthetic assignment dataset is small and is not a general measure of real-world detection quality.
+Optional browser smoke checks require Playwright and a browser installation:
 
-## Architecture
+```bash
+pip install playwright
+python -m playwright install chromium
+python scripts/ui_smoke.py
+```
 
-| Module | Responsibility |
-|---|---|
-| `app/api.py` | FastAPI routes and request validation |
-| `app/catalog.py` | SQLite/filesystem storage, metadata provenance, corrections, audit events, image operations |
-| `app/detector.py` | Detection routing and merging of classical/neural proposals |
-| `app/neural.py` | YOLOX-nano COCO detector via OpenCV DNN |
-| `app/yoloworld.py` | Optional Ultralytics YOLO-World open-vocabulary detector |
-| `app/openvocab.py` | Optional OWLv2 text-guided detector |
-| `app/compose.py` | Prompt parsing, asset resolution, layout, rendering, and composite metadata |
-| `app/planner.py` | Gemini-assisted planning with deterministic local fallback |
-| `app/generator.py` | AI image generation provider and local fallback |
-| `app/imageops.py` | Pixel-level editing and background operations |
-| `app/evaluate.py` | Ground-truth metrics and model comparison |
-| `static/index.html` | Browser UI (vanilla JavaScript and SVG overlays) |
+The demo writes example images, metadata, and a summary under `examples/`. The test set is generated by `scripts/make_testdata.py`; if regenerated, inspect the resulting ground truth and outputs before comparing benchmark numbers.
 
-## Detection and correction behavior
+## Detection and correction rules
 
-Flat illustrations use color and geometry rules to find regions and classify common assignment objects. Complex images use YOLOX proposals when weights are installed; optional YOLO-World and OWLv2 can add open-vocabulary proposals. Normal detection on new images now invokes YOLO-World with a fixed common-label vocabulary when the backend is available. User-supplied labels can be added during explicit re-detection. If a backend is unavailable, the applicable classical/YOLOX routes continue where possible and status reports capability limitations.
+New image uploads run detection by default. For flat art, the detector uses image color/geometry rules and can use YOLO-World when available. For complex backgrounds, neural proposals (YOLOX-nano and optional open-vocabulary detectors) are segmented with GrabCut or fallback masks. Detection status distinguishes successful, low-confidence, no-object, and failed cases.
 
-Object labels, colors, confidence, and bounding boxes retain per-field provenance (`auto` or `user`). The original automatic values are retained for reverting. `preserve_manual` updates only untouched automatic detections; manual additions, edits, confirmations, and removals remain in effect. `replace_all` explicitly replaces detections, including corrections. New generated images are also detected and receive a final detection status.
+Each object's editable fields keep provenance (`auto` or `user`), and automatic values are retained for reverting. Manual additions and edits are not silently overwritten: the API requires a re-detection mode. `preserve_manual` updates untouched automatic detections; `replace_all` explicitly replaces the current set, including manual work.
 
-## Composite behavior
+## Limitations
 
-The default **Assets** mode parses the instruction, resolves requested objects to original catalog images, lays out cut-outs, and saves a new composite entry with provenance and object boxes. It refuses to substitute approximations for missing catalog assets. **Hybrid** and **Pure AI** are separate explicit modes and require a working generator; those modes can synthesize pixels by design. The LLM planner is optional and does not grant permission to invent catalog assets in Assets mode. Without a Gemini key, local parsing/resolution is used.
-
-## Security and scope
-
-This is a single-user local application with no authentication, multi-user isolation, or network deployment security. Do not expose it to an untrusted network. Authentication and the seeded demo accounts have been removed; no login screen or authentication API is provided. API settings do not accept or persist API keys.
-
-## Known limitations
-
-- The generated assignment test images are synthetic and easier than varied real artwork or photography.
-- Cartoon boy/girl classification is a visual convention and should be reviewed.
-- Optional model performance depends on installed packages, weight availability, hardware, and the supplied vocabulary.
-- Mask quality and recolor/erase results can be imperfect, especially on complex photography.
-- The local fallback generator is not equivalent to a hosted image-generation model.
-- Trash has no automatic expiry; permanently purged files cannot be restored.
+- The assignment test images are synthetic and simpler than varied illustrations or photographs.
+- YOLOX recognizes only its COCO classes. Open-vocabulary results depend on prompts and installed models.
+- YOLO-World/OWLv2 weights, first-time model downloads, hardware, and network availability affect runtime.
+- Boy/girl classification in stylized drawings is heuristic and should be reviewed.
+- Segmentation and pixel edits can be rough on complex images.
+- Pollinations and Google image generation need network access; the local synthesizer is a limited fallback.
+- This is a local single-user project, not a hardened multi-user or public web service.
