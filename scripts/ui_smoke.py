@@ -13,7 +13,11 @@ ROOT = Path(__file__).resolve().parent.parent
 shots = Path(sys.argv[sys.argv.index("--shots") + 1]) if "--shots" in sys.argv else None
 s = socket.socket(); s.bind(("127.0.0.1", 0)); PORT = s.getsockname()[1]; s.close()
 BASE = f"http://127.0.0.1:{PORT}"
-api = lambda p: json.load(urllib.request.urlopen(BASE + "/api" + p))
+TOKEN = ""
+def api(p):
+    req = urllib.request.Request(BASE + "/api" + p)
+    if TOKEN: req.add_header("Authorization", "Bearer " + TOKEN)
+    return json.load(urllib.request.urlopen(req))
 results = []
 
 
@@ -34,12 +38,28 @@ try:
         try: api("/health"); break
         except Exception: time.sleep(.5)
     with sync_playwright() as p:
-        b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 900}, color_scheme="dark"); errs = []
+        b = p.chromium.launch(); pg = b.new_page(viewport={"width": 1500, "height": 900}, color_scheme="dark"); errs = []; media_errors = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
-        pg.goto(BASE); pg.wait_for_selector("#btn-seed"); pg.click("#btn-seed")
+        pg.on("response", lambda r: media_errors.append(f"{r.status} {r.url}") if r.status >= 400 and any(x in r.url for x in ("/thumb", "/file", "/asset")) else None)
+        pg.goto(BASE); pg.wait_for_selector("#dlg-auth[open]")
+        pg.click("#tab-register"); pg.fill("#auth-username", "smokeuser"); pg.fill("#auth-dispname", "Smoke User")
+        pg.fill("#auth-password", "smokepass123"); pg.click("#btn-auth-submit")
+        time.sleep(1)
+        if pg.locator("#dlg-auth").evaluate("e=>e.open"):
+            print("Authentication form error:", pg.locator("#auth-err").inner_text(), "Page errors:", errs)
+        pg.wait_for_function("!document.querySelector('#dlg-auth').open")
+        TOKEN = pg.evaluate("localStorage.getItem('imgcatalog_token')")
+        pg.wait_for_selector("#btn-seed"); pg.click("#btn-seed")
         pg.wait_for_selector("#film button", timeout=180000); time.sleep(1.5)
+        pg.click("#user-profile-widget"); pg.wait_for_selector("#dlg-user-profile[open]")
+        check("profile shows signed-in user", pg.inner_text("#pop-name") == "Smoke User")
+        pg.click("#dlg-user-profile [data-close]")
         n0 = len(api("/images")); check("sample catalog loaded", n0 == 10, n0)
         pg.click("#film button >> nth=6"); time.sleep(1.5)                       # apple_orange
+        pg.wait_for_function("document.querySelector('#img').naturalWidth > 0", timeout=15000)
+        check("authenticated image and thumbnail requests load", not media_errors, media_errors)
+        check("detector model and pipeline are identified separately",
+              pg.get_by_text("Model used", exact=True).count() == 1 and pg.get_by_text("Pipeline", exact=True).count() == 1)
         shot(pg, "ui-catalog.png")
 
         pg.click(".cls[data-l='apple'] [data-pick]"); pg.wait_for_selector("#picker"); shot(pg, "ui-colour-picker.png")
@@ -81,6 +101,11 @@ try:
         t0 = pg.evaluate("document.documentElement.dataset.theme"); pg.click("#btn-theme")
         check("theme toggles", pg.evaluate("document.documentElement.dataset.theme") != t0)
         pg.click("#cap-pill"); pg.wait_for_selector("#caps-body"); check("capability dialog", "pip install" in pg.inner_text("#caps-body") or "active" in pg.inner_text("#caps-body"))
+        pg.click("#dlg-caps [data-close]")
+        pg.click("#user-profile-widget"); pg.wait_for_selector("#dlg-user-profile[open]"); pg.click("#btn-logout")
+        pg.wait_for_function("!document.querySelector('#dlg-user-profile').open")
+        pg.wait_for_selector("#dlg-auth[open]")
+        check("logout returns to login", not pg.evaluate("localStorage.getItem('imgcatalog_token')"))
         check("no JavaScript errors", not errs, errs); b.close()
 finally:
     srv.terminate()

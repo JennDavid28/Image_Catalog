@@ -51,9 +51,9 @@ The central constraint is that the default **Assets** composition mode uses cata
 | Model or method | Used for | Why it is included | Availability |
 |---|---|---|---|
 | Classical OpenCV rules | Flat illustrations and the provided assignment set | Color regions and shape geometry are predictable on clean drawings; results are fast, local, and explainable | Included in the base project; not a trained ML model |
-| **YOLOX-nano** (COCO, 80 classes; ONNX) | Neural proposals and corroboration, mainly for photographs | Small model that runs through OpenCV DNN without PyTorch or a GPU; adds common real-world object classes | Optional weights at `models/yolox_nano.onnx`; run `python scripts/fetch_assets.py` to download |
-| **YOLO-World v2** (default `yolov8s-worldv2.pt`) | Open-vocabulary object proposals during normal detection when Ultralytics is installed; additional labels may be used on explicit re-detection | Text-promptable detector can search for concepts beyond COCO's fixed 80 classes | Model file is present at the repository root. Requires `ultralytics`; can be disabled with `YOLOWORLD=off` or changed with `YOLOWORLD_MODEL` |
-| **OWLv2** (`google/owlv2-base-patch16-ensemble`) | Optional text-guided proposal source in detection and benchmarking | Offers a separate open-vocabulary detector implementation for user-supplied concepts | Optional; requires `torch` and `transformers`. Weights may be downloaded on first use or configured with `OPENVOCAB_MODEL`; disable with `OPENVOCAB=off` |
+| **YOLOX-nano** (COCO, 80 classes; ONNX) | Fast neural proposals and corroboration, mainly for photographs | Small model that runs through OpenCV DNN without PyTorch or a GPU; adds common real-world object classes | `models/yolox_nano.onnx` is included in this checkout; run `python scripts/fetch_assets.py` if it is missing |
+| **YOLO-World v2** (default `yolov8s-worldv2.pt`) | Queried during normal detection when Ultralytics is installed; supplies open-vocabulary proposals alongside YOLOX on complex-background images | Text-promptable detector can search for concepts beyond COCO's fixed 80 classes; the UI reports when it was queried | Model file is present at the repository root. Requires `ultralytics`; can be disabled with `YOLOWORLD=off` or changed with `YOLOWORLD_MODEL`. First use may install Ultralytics' CLIP dependency and require an app restart |
+| **OWLv2** (`google/owlv2-base-patch16-ensemble`) | Optional text-guided proposal source when extra labels are supplied, and in benchmarking | Offers a separate open-vocabulary detector implementation for user-supplied concepts | Optional; requires `torch` and `transformers`. Weights may be downloaded on first use or configured with `OPENVOCAB_MODEL`; disable with `OPENVOCAB=off` |
 | **Gemini Flash** (planner default `gemini-2.5-flash`) | Optional natural-language planning and interpretation | Turns freer instructions into a structured plan; the Assets resolver still validates every requested object against the catalog | Requires `google-genai` and `GEMINI_API_KEY` (or `GOOGLE_API_KEY`). Local parsing is used when unavailable |
 | **Gemini image models** (`gemini-3.1-flash-image`, `gemini-2.5-flash-image`, `gemini-3-pro-image`; then Imagen 3 fallback) | Pure AI and supported hybrid generation | Creates new scene pixels when the user chooses a generation mode that allows them | Requires the Google GenAI SDK and a working API key/model entitlement |
 | **Pollinations Flux** | Secondary image-generation fallback | Gives the generator another remote provider attempt if Google image generation fails | Uses network access; no local model installation |
@@ -66,7 +66,7 @@ The benchmark evaluates the bundled synthetic ground-truth images. YOLO-World an
 ## Project directory
 
 ```text
-Image_Catalog/
+imgcatalog/
 ├── app/                       # Application and processing modules
 │   ├── api.py                 # FastAPI routes and validation
 │   ├── catalog.py             # SQLite/filesystem storage, metadata, corrections, audit log
@@ -120,7 +120,7 @@ python scripts/fetch_assets.py   # optional: YOLOX-nano for photographs
 uvicorn app.api:app --host 127.0.0.1 --port 8000
 ```
 
-Open <http://127.0.0.1:8000> and use **Load sample catalog**. The application stores its local catalog in `data/store/`.
+Open <http://127.0.0.1:8000>, create an account with a username, name, and password, or sign in to an existing account. Each account has its own catalog; use **Sample data** to add the assignment images to that account. The local database and uploaded files are stored in `data/store/`.
 
 ### macOS or Linux
 
@@ -170,7 +170,7 @@ For Gemini planning/image generation, set `GEMINI_API_KEY` or `GOOGLE_API_KEY` i
 GEMINI_API_KEY=YOUR_KEY_HERE
 ```
 
-The application does not provide an endpoint for writing or retrieving API keys. Do not expose this local development server to an untrusted network; it has no authentication or multi-user isolation.
+The application does not provide an endpoint for writing or retrieving API keys. Catalog APIs require a signed-in account, and image collections and class colours are scoped to that account. This local development app does not include production deployment protections such as HTTPS termination, rate limiting, or account recovery; do not expose it directly to an untrusted network.
 
 ## Tests, demo, and benchmark
 
@@ -192,16 +192,17 @@ The demo writes example images, metadata, and a summary under `examples/`. The t
 
 ## Detection and correction rules
 
-New image uploads run detection by default. For flat art, the detector uses image color/geometry rules and can use YOLO-World when available. For complex backgrounds, neural proposals (YOLOX-nano and optional open-vocabulary detectors) are segmented with GrabCut or fallback masks. Detection status distinguishes successful, low-confidence, no-object, and failed cases.
+New image uploads run detection by default. For flat art, the detector uses image color/geometry rules and can add YOLO-World proposals when available. For complex backgrounds, YOLOX-nano must be available for the neural route; YOLO-World is queried alongside it when installed, and proposals are segmented with GrabCut or fallback masks. OWLv2 can add proposals when extra labels are supplied and its optional dependencies are installed. Detection status distinguishes successful, low-confidence, no-object, and failed cases.
 
 Each object's editable fields keep provenance (`auto` or `user`), and automatic values are retained for reverting. Manual additions and edits are not silently overwritten: the API requires a re-detection mode. `preserve_manual` updates untouched automatic detections; `replace_all` explicitly replaces the current set, including manual work.
 
 ## Limitations
 
 - The assignment test images are synthetic and simpler than varied illustrations or photographs.
-- YOLOX recognizes only its COCO classes. Open-vocabulary results depend on prompts and installed models.
+- YOLOX recognizes only its COCO classes. YOLO-World and OWLv2 results depend on their installed models and prompt vocabulary; complex-background neural detection also needs the YOLOX ONNX file.
 - YOLO-World/OWLv2 weights, first-time model downloads, hardware, and network availability affect runtime.
 - Boy/girl classification in stylized drawings is heuristic and should be reviewed.
 - Segmentation and pixel edits can be rough on complex images.
 - Pollinations and Google image generation need network access; the local synthesizer is a limited fallback.
-- This is a local single-user project, not a hardened multi-user or public web service.
+- Accounts isolate catalogs on the local installation. There is no password reset or account recovery flow.
+- This is a local development app, not a hardened public web service.

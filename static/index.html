@@ -2199,9 +2199,6 @@
           <use href="#i-search" />
         </svg><input id="q" type="search" placeholder="Search images…" aria-label="Search images"></label>
       <span class="spacer"></span>
-      <button class="pill" id="btn-top-user" title="Account profile" style="gap:6px"><span class="sw"
-          id="top-user-avatar-dot" style="width:9px;height:9px;border-radius:50%;background:#6c63ff"></span><span
-          id="top-user-label">Admin</span></button>
       <button class="pill" id="cap-pill" title="What can the detector recognise?"><span class="dot"></span><span
           id="cap-text" class="lbl">Detector</span></button>
       <button class="pill" id="btn-bench" title="Compare YOLO-World, OWLv2, and Hybrid detectors"><svg class="i">
@@ -2214,7 +2211,7 @@
         title="Load sample catalog dataset with apple, orange, shapes, etc."><svg class="i">
           <use href="#i-down" />
         </svg><span class="lbl">Sample data</span></button>
-      <button class="btn primary" id="btn-upload"><svg class="i">
+      <button class="btn primary" id="btn-upload" style="margin-left:auto"><svg class="i">
           <use href="#i-plus" />
         </svg><span class="lbl"> add image</span></button>
       <input type="file" id="file" accept="image/*" multiple hidden>
@@ -2238,8 +2235,8 @@
         <div class="user-profile-widget" id="user-profile-widget" title="Click to view user profile & stats">
           <div class="user-avatar" id="user-avatar-circle">AD</div>
           <div class="user-info-text">
-            <div class="user-display-name" id="user-disp-name">Administrator</div>
-            <div class="user-role-badge" id="user-role-tag">Admin</div>
+            <div class="user-display-name" id="user-disp-name">Your account</div>
+            <div class="user-role-badge" id="user-role-tag">Designer</div>
           </div>
           <svg class="i" style="width:14px;height:14px;opacity:0.6;">
             <use href="#i-down" />
@@ -2553,13 +2550,13 @@
       <div style="display:flex;align-items:center;gap:12px">
         <div class="user-avatar" id="pop-avatar" style="width:44px;height:44px;font-size:16px">AD</div>
         <div>
-          <h3 id="pop-name" style="margin:0;font-size:16px">Administrator</h3>
-          <span class="hint" id="pop-handle">@admin · Admin</span>
+          <h3 id="pop-name" style="margin:0;font-size:16px">Your account</h3>
+          <span class="hint" id="pop-handle">@username · Designer</span>
         </div>
       </div>
       <button class="btn small" data-close>✕</button>
     </div>
-    <p id="pop-email" style="margin:10px 0 4px;font-size:12.5px;color:var(--muted)">admin@imgcatalog.local</p>
+    <p id="pop-email" style="margin:10px 0 4px;font-size:12.5px;color:var(--muted)"></p>
 
     <div class="stats-grid" id="pop-stats" style="margin:14px 0">
       <div class="stat-card">
@@ -2592,7 +2589,6 @@
   <dialog id="dlg-auth" style="max-width:440px">
     <div class="ph">
       <h3 id="auth-title">Sign in to Image Catalog</h3>
-      <button class="btn small" data-close>✕</button>
     </div>
     <p style="margin-bottom:12px">Your personal image collections, corrections, and compositions are securely stored
       under your account.</p>
@@ -2602,21 +2598,15 @@
       <button class="auth-tab" id="tab-register" type="button">Create Account</button>
     </div>
 
-    <div class="demo-chips" id="demo-chips-box">
-      <span class="hint" style="align-self:center;font-size:11.5px">Quick Demo:</span>
-      <button class="demo-chip" type="button" data-demo-user="admin" data-demo-pass="admin123">Admin</button>
-      <button class="demo-chip" type="button" data-demo-user="demo" data-demo-pass="demo123">Designer</button>
-    </div>
-
     <form id="auth-form" onsubmit="return false;">
       <label class="field" style="margin-bottom:10px">
         <span>Username</span>
-        <input class="input" id="auth-username" required autocomplete="username" placeholder="e.g. admin or ivan">
+        <input class="input" id="auth-username" required autocomplete="username" placeholder="Choose a username">
       </label>
       <div id="auth-reg-fields" hidden>
         <label class="field" style="margin-bottom:10px">
-          <span>Display Name</span>
-          <input class="input" id="auth-dispname" placeholder="e.g. Ivan Ajay David">
+          <span>Name</span>
+          <input class="input" id="auth-dispname" placeholder="Your name" autocomplete="name">
         </label>
         <label class="field" style="margin-bottom:10px">
           <span>Email (optional)</span>
@@ -2625,13 +2615,12 @@
       </div>
       <label class="field" style="margin-bottom:14px">
         <span>Password</span>
-        <input class="input" type="password" id="auth-password" required autocomplete="current-password"
-          placeholder="Password">
+        <input class="input" type="password" id="auth-password" required autocomplete="current-password" minlength="8"
+          placeholder="At least 8 characters">
       </label>
       <div id="auth-err" class="banner bad flat" style="margin-bottom:10px" hidden></div>
       <div class="row">
-        <button class="btn primary grow" id="btn-auth-submit" type="submit">Sign In</button>
-        <button class="btn" data-close type="button">Cancel</button>
+        <button class="btn primary grow" id="btn-auth-submit" type="button">Sign In</button>
       </div>
     </form>
   </dialog>
@@ -2657,6 +2646,19 @@
     const STATUS = { ok: "Detected", low_confidence: "Needs a look", no_objects: "Nothing found", failed: "Detection failed", composed: "Composite", pending: "Pending" };
     const fmtPct = v => v == null ? "–" : v.toFixed(2);
     const classColor = l => S.cmap[l] || "#64748b";
+    function detectedModels(a, objects = []) {
+      const sources = new Set(objects.map(o => o.attrs?.source).filter(Boolean));
+      const labels = [];
+      if (sources.has("classical") || (!sources.size && String(a.route || "").startsWith("flat-background"))) labels.push("OpenCV colour/shape");
+      if (sources.has("yolox") || objects.some(o => o.attrs?.neural_agrees) || /neural second opinion/.test(a.route || "") ||
+          (String(a.route || "").startsWith("complex-background") && a.detection_status !== "failed")) labels.push("YOLOX-nano");
+      if (sources.has("yolo-world")) labels.push("YOLO-World v2");
+      if (sources.has("open-vocab")) labels.push("OWLv2");
+      if (/YOLO-World/.test(a.route || "") && !labels.includes("YOLO-World v2")) labels.push("YOLO-World v2 (queried)");
+      if (/OWLv2/.test(a.route || "") && !labels.includes("OWLv2")) labels.push("OWLv2 (queried)");
+      if (!labels.length && /open-vocabulary/.test(a.route || "")) labels.push("Open-vocabulary search");
+      return labels.join(" + ") || (a.detection_status === "failed" ? "No detector available" : "OpenCV colour/shape");
+    }
 
     let toastT;
     function toast(msg, err = false, action = null) {
@@ -2691,7 +2693,8 @@
       const r = await fetch("/api" + path, o);
       let data = null; try { data = await r.json(); } catch (_) { }
       if (!r.ok) {
-        const e = new Error((data && (data.error || (typeof data.detail === "string" ? data.detail : ""))) || r.statusText);
+        const detail = Array.isArray(data?.detail) ? data.detail.map(item => item.msg).filter(Boolean).join("; ") : data?.detail;
+        const e = new Error((data && (data.error || (typeof detail === "string" ? detail : ""))) || r.statusText);
         e.data = data;
         e.status = r.status;
         throw e;
@@ -2718,8 +2721,6 @@
       setT("#user-disp-name", user.display_name || user.username);
       setT("#user-role-tag", user.role || "Designer");
 
-      setB("#top-user-avatar-dot", user.avatar_color || "#6c63ff");
-      setT("#top-user-label", (user.display_name || user.username).split(" ")[0]);
 
       setT("#pop-avatar", initials || "U");
       setB("#pop-avatar", user.avatar_color || "#6c63ff");
@@ -2763,20 +2764,11 @@
       $("#auth-title").textContent = isLogin ? "Sign in to Image Catalog" : "Create Account";
       $("#btn-auth-submit").textContent = isLogin ? "Sign In" : "Register";
       $("#auth-reg-fields").hidden = isLogin;
-      $("#demo-chips-box").hidden = !isLogin;
       $("#auth-err").hidden = true;
     }
 
     $("#tab-login").onclick = () => setAuthTab("login");
     $("#tab-register").onclick = () => setAuthTab("register");
-
-    $$(".demo-chip").forEach(ch => {
-      ch.onclick = async () => {
-        $("#auth-username").value = ch.dataset.demoUser;
-        $("#auth-password").value = ch.dataset.demoPass;
-        await doAuthSubmit();
-      };
-    });
 
     async function doAuthSubmit() {
       const isLogin = $("#tab-login").classList.contains("active");
@@ -2791,18 +2783,24 @@
         errBox.hidden = false;
         return;
       }
+      if (!isLogin && !disp) {
+        errBox.textContent = "Please enter your name";
+        errBox.hidden = false;
+        return;
+      }
 
       try {
         let res;
         if (isLogin) {
           res = await api("/auth/login", { json: { username, password } });
         } else {
-          res = await api("/auth/register", { json: { username, password, display_name: disp, email } });
+          res = await api("/auth/register", { json: { username, password, name: disp, email } });
         }
         setAuthToken(res.token);
         updateUserUI(res.user, res.stats);
         $("#dlg-auth").close();
         toast(`Welcome, ${res.user.display_name}!`);
+        await loadCaps();
         await loadList();
       } catch (e) {
         errBox.textContent = e.message || "Authentication failed";
@@ -2810,10 +2808,27 @@
       }
     }
 
-    $("#auth-form").onsubmit = guard(doAuthSubmit);
-
-    $("#user-profile-widget").hidden = true;
-    $("#btn-top-user").hidden = true;
+    $("#btn-auth-submit").onclick = guard(doAuthSubmit);
+    $("#auth-form").onsubmit = event => { event.preventDefault(); doAuthSubmit(); };
+    $("#user-profile-widget").onclick = guard(async () => {
+      await refreshUserProfile();
+      $("#dlg-user-profile").showModal();
+    });
+    $("#btn-switch-user").onclick = guard(async () => {
+      await api("/auth/logout", { method: "POST" });
+      setAuthToken("");
+      $("#dlg-user-profile").close();
+      $("#auth-password").value = "";
+      showAuthDialog("login");
+    });
+    $("#btn-logout").onclick = guard(async () => {
+      await api("/auth/logout", { method: "POST" });
+      setAuthToken("");
+      location.reload();
+    });
+    $("#dlg-auth").addEventListener("cancel", event => {
+      if (!getAuthToken()) event.preventDefault();
+    });
 
     // AI settings are managed via .env
 
@@ -3175,7 +3190,8 @@
   <div class="section auto"><h3>Generated automatically <small>read only</small></h3><dl class="kv">
     <dt>Size</dt><dd>${a.width} × ${a.height} px, ${esc(a.format)}, ${(a.bytes / 1024).toFixed(0)} KB</dd><dt>Status</dt><dd>${esc(STATUS[a.detection_status] || a.detection_status)}</dd>
     <dt>Colours</dt><dd>${a.dominant_colors.length ? a.dominant_colors.map(c => `${colorDots(c)} ${esc(c)}`).join(" &nbsp;") : "–"}</dd>
-    <dt>Detector</dt><dd>${esc(a.detector_version || "–")}</dd><dt>Route</dt><dd>${esc(a.route || "–")}${dur}</dd>
+    <dt>Model used</dt><dd>${esc(detectedModels(a, d.objects || []))}</dd><dt>Pipeline</dt><dd>${esc(a.detector_version || "–")}</dd>
+    <dt>Route</dt><dd>${esc(a.route || "–")}${dur}</dd>
     <dt>Added</dt><dd>${esc((a.created_at || "").replace("T", " ").replace("+00:00", " UTC"))}</dd></dl>
     ${p ? `<details class="evid"><summary>${provHtml}</details>` : ""}</div>
   <div class="row"><button class="btn grow" id="btn-redetect">Run detection again…</button><a class="btn" id="btn-export" href="/api/images/${S.cur}/metadata" download>Export JSON</a></div>`;
@@ -3553,6 +3569,8 @@
     $("#tab-catalog").onclick = () => switchView("catalog"); $("#tab-compose").onclick = () => switchView("compose"); $("#tab-trash").onclick = () => switchView("trash");
     (async () => {
       try {
+        const user = await refreshUserProfile();
+        if (!user) { showAuthDialog("login"); return; }
         await loadCaps();
         await loadList();
       } catch (err) {

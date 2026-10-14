@@ -7,7 +7,10 @@ from tests.conftest import img_bytes
 
 @pytest.fixture()
 def client(tmp_path):
-    return TestClient(create_app(tmp_path / "store"))
+    client = TestClient(create_app(tmp_path / "store"))
+    client.post("/api/auth/register", json={"username": "tester", "display_name": "Test User", "password": "testpass123"})
+    client.headers["Authorization"] = "Bearer " + client.post("/api/auth/login", json={"username": "tester", "password": "testpass123"}).json()["token"]
+    return client
 
 
 def up(client, name):

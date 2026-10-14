@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 
 from .colors import dominant_color_names, name_from_hsv, region_color, rgb_to_hsv_deg
-from .neural import YoloxDetector, detect_tiled
+from .neural import COCO, YoloxDetector, detect_tiled
 from .openvocab import OPENVOCAB, nms_items
 from .segmentation import border_background, box_mask, fill_holes, grabcut_mask, mask_bbox, to_lab
 
@@ -416,15 +416,27 @@ def _proposals(bgr, yolox, conf, extra_labels):
     from .yoloworld import YOLOWORLD
     props = [{**r, "src": "yolox"} for r in detect_tiled(yolox, bgr, conf=conf)] if yolox.available() else []
     ov_used = False
+    world_used = False
     
-    # Fast open-vocabulary queries with YOLO-World when extra_labels requested
+    # Query YOLO-World during normal detection with the common vocabulary, then
+    # add any user-supplied concepts to that vocabulary.
     if YOLOWORLD.available():
-        labels = extra_labels or sorted(set(COCO_OF) | set(ROUND_CLASSES) | {"apple", "orange", "circle", "square", "triangle", "rectangle"})
+        labels = sorted(
+            {name.replace("_", " ") for name in COCO}
+            | set(COCO_OF)
+            | set(ROUND_CLASSES)
+            | {"circle", "square", "triangle", "rectangle"}
+            | {str(name).strip() for name in (extra_labels or []) if str(name).strip()}
+        )
         yw_results, _ = YOLOWORLD.detect(bgr, classes=labels, conf_threshold=conf)
+        # Record that this backend was queried even when its proposals overlap
+        # YOLOX boxes or it returns no boxes; the UI reports backend use, not only
+        # which detector's box survived NMS.
+        ov_used = True
+        world_used = True
         for y in yw_results:
             y["src"] = "yolo-world"
             props.append(y)
-            ov_used = True
 
     # OWLv2 text-guided proposals (used when extra_labels are requested)
     if OPENVOCAB.available() and extra_labels:
@@ -443,12 +455,12 @@ def _proposals(bgr, yolox, conf, extra_labels):
     props = nms_items(props, 0.6)
     # a weak box that sits inside a stronger one is usually a part (keyboard inside laptop), not a separate object
     props = [p for p in props if not (p["score"] < 0.45 and any(q is not p and q["score"] > p["score"] and _contained(p["bbox"], q["bbox"]) for q in props))]
-    return props[:MAX_PHOTO_OBJECTS], ov_used
+    return props[:MAX_PHOTO_OBJECTS], ov_used, world_used
 
 
-def _neural(bgr, rgb, yolox: YoloxDetector, conf=0.15, extra_labels=None) -> tuple[list[Detection], bool]:
+def _neural(bgr, rgb, yolox: YoloxDetector, conf=0.15, extra_labels=None) -> tuple[list[Detection], bool, bool]:
     dets = []
-    props, ov_used = _proposals(bgr, yolox, conf, extra_labels)
+    props, ov_used, world_used = _proposals(bgr, yolox, conf, extra_labels)
     for r in props:
         label = r["label"].replace("_", " ")
         weak = r["score"] < WEAK_SCORE
@@ -497,7 +509,7 @@ def _neural(bgr, rgb, yolox: YoloxDetector, conf=0.15, extra_labels=None) -> tup
         bbox = r["bbox"] if shape_note else (mask_bbox(mask) if q >= 0.35 else r["bbox"])
         dets.append(Detection(label, name, conf_, tuple(bbox), mask, "neural" if r["src"] == "yolox" else "open-vocab",
                               {"neural_score": round(r["score"], 3), "rgb": list(rgbv), "source": r["src"], "weak": weak}, evid))
-    return dets, ov_used
+    return dets, ov_used, world_used
 
 
 COCO_OF = {"boy": "person", "girl": "person", "apple": "apple", "orange": "orange"}
@@ -554,24 +566,32 @@ def detect(bgr: np.ndarray, use_neural: bool = True, extra_labels: list | None =
         dets = _classical(work, rgb, lab, bg)
         from .yoloworld import YOLOWORLD
         if YOLOWORLD.available():
-            world, _ = _neural(work, rgb, _YOLOX, conf=req_conf, extra_labels=extra_labels)
+            world, _, world_used = _neural(work, rgb, _YOLOX, conf=req_conf, extra_labels=extra_labels)
             for candidate in world:
                 if not any(iou(candidate.bbox, existing.bbox) >= 0.5 for existing in dets):
                     dets.append(candidate)
-            if world:
+            if world_used:
                 route = "flat-background + YOLO-World"
         if dets and neural_ok:
             _corroborate(dets, work, _YOLOX)
         if not dets and neural_ok:
-            dets, _ = _neural(work, rgb, _YOLOX, conf=max(req_conf, 0.30), extra_labels=extra_labels)
+            dets, _, world_used = _neural(work, rgb, _YOLOX, conf=max(req_conf, 0.30), extra_labels=extra_labels)
             route = "flat-background -> neural second opinion"
         if not dets:
             msg = "Nothing stands out from the background (object may be too faint or absent)."
     else:
         route = "complex-background"
         if neural_ok:
-            dets, ov_used = _neural(work, rgb, _YOLOX, conf=req_conf, extra_labels=extra_labels)
-            route = "complex-background + open-vocabulary" if (extra_labels or ov_used) else "complex-background"
+            dets, ov_used, world_used = _neural(work, rgb, _YOLOX, conf=req_conf, extra_labels=extra_labels)
+            if ov_used:
+                route = "complex-background"
+                if world_used:
+                    route += " + YOLO-World"
+                elif OPENVOCAB.available() and extra_labels:
+                    route += " + OWLv2"
+                route += " + open-vocabulary"
+            elif world_used:
+                route = "complex-background + YOLO-World"
             if not dets:
                 msg = "No known object found on this busy background."
         else:

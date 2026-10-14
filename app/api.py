@@ -82,10 +82,57 @@ class GenerateReq(BaseModel):
     name: Optional[str] = Field(None, max_length=120)
 
 
+class LoginReq(BaseModel):
+    # Credential mistakes should be reported as an authentication failure (401),
+    # rather than rejected by request validation (422).
+    username: str = Field(..., min_length=1, max_length=50)
+    password: str = Field(..., max_length=100)
+
+
+class RegisterReq(BaseModel):
+    username: str = Field(..., min_length=1, max_length=50)
+    display_name: Optional[str] = Field(None, max_length=80)
+    name: Optional[str] = Field(None, max_length=80)
+    password: str = Field(..., max_length=100)
+
+
 def create_app(data_dir: str | Path | None = None) -> FastAPI:
     app = FastAPI(title="Image Catalog", version="1.0")
     cat = Catalog(data_dir)
     app.state.catalog = cat
+    from .auth import AuthService
+    auth_srv = AuthService(cat.db_path)
+    app.state.auth = auth_srv
+
+    @app.middleware("http")
+    async def authenticated_catalog(request: Request, call_next):
+        path = request.url.path
+        if path.startswith("/api/") and path not in {
+            "/api/auth/login", "/api/auth/register", "/api/health"
+        }:
+            header = request.headers.get("authorization", "")
+            token = header[7:].strip() if header.lower().startswith("bearer ") else ""
+            token = token or request.headers.get("x-auth-token", "") or request.cookies.get("auth_token", "")
+            user = auth_srv.authenticate_token(token) if token else None
+            if not user:
+                return JSONResponse({"error": "Not authenticated"}, status_code=401)
+            request.state.user = user
+
+            parts = [part for part in path.split("/") if part]
+            owner = None
+            with cat._conn() as c:
+                if len(parts) >= 3 and parts[1] == "images":
+                    row = c.execute("SELECT user_id FROM images WHERE id=?", (parts[2],)).fetchone()
+                    owner = row["user_id"] if row else None
+                elif len(parts) >= 3 and parts[1] == "trash":
+                    row = c.execute("SELECT user_id FROM images WHERE id=?", (parts[2],)).fetchone()
+                    owner = row["user_id"] if row else None
+                elif len(parts) >= 3 and parts[1] == "objects":
+                    row = c.execute("SELECT i.user_id FROM objects o JOIN images i ON i.id=o.image_id WHERE o.id=?", (parts[2],)).fetchone()
+                    owner = row["user_id"] if row else None
+            if len(parts) >= 3 and parts[1] in {"images", "objects", "trash"} and owner != user["id"]:
+                return JSONResponse({"error": "Not found"}, status_code=404)
+        return await call_next(request)
 
     @app.exception_handler(NotFound)
     async def _nf(_: Request, e: NotFound):
@@ -103,10 +150,55 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
     async def _comp(_: Request, e: compose.CompositionError):
         return JSONResponse({"error": str(e), "missing": e.missing, "suggestions": e.suggestions, "plan": e.plan}, 422)
 
+    @app.post("/api/auth/register", status_code=201)
+    def auth_register(body: RegisterReq, response: Response, req: Request):
+        try:
+            token, user = auth_srv.register(body.username, body.password, body.display_name or body.name)
+            response.set_cookie("auth_token", token, max_age=30 * 24 * 60 * 60,
+                                httponly=True, secure=req.url.scheme == "https",
+                                samesite="lax", path="/api")
+            return {"token": token, "user": user, "stats": auth_srv.get_user_stats(user["id"])}
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+
+    @app.post("/api/auth/login")
+    def auth_login(body: LoginReq, response: Response, req: Request):
+        try:
+            token, user = auth_srv.login(body.username, body.password)
+            response.set_cookie("auth_token", token, max_age=30 * 24 * 60 * 60,
+                                httponly=True, secure=req.url.scheme == "https",
+                                samesite="lax", path="/api")
+            return {"token": token, "user": user, "stats": auth_srv.get_user_stats(user["id"])}
+        except ValueError as e:
+            raise HTTPException(401, str(e))
+
+    @app.get("/api/auth/me")
+    def auth_me(req: Request, response: Response):
+        header = req.headers.get("authorization", "")
+        token = (header[7:].strip() if header.lower().startswith("bearer ") else req.headers.get("x-auth-token", "")) or req.cookies.get("auth_token", "")
+        user = getattr(req.state, "user", None)
+        if not user:
+            user = auth_srv.authenticate_token(token) if token else None
+        if not user:
+            raise HTTPException(401, "Not authenticated")
+        # Upgrade sessions created before image media switched to cookie auth.
+        response.set_cookie("auth_token", token, max_age=30 * 24 * 60 * 60,
+                            httponly=True, secure=req.url.scheme == "https",
+                            samesite="lax", path="/api")
+        return {"user": user, "stats": auth_srv.get_user_stats(user["id"])}
+
+    @app.post("/api/auth/logout")
+    def auth_logout(req: Request, response: Response):
+        header = req.headers.get("authorization", "")
+        token = (header[7:].strip() if header.lower().startswith("bearer ") else req.headers.get("x-auth-token", "")) or req.cookies.get("auth_token", "")
+        auth_srv.logout(token)
+        response.delete_cookie("auth_token", path="/api", httponly=True, samesite="lax")
+        return {"ok": True}
+
     # ------------------------------------------------------------------ images
     @app.get("/api/images")
-    def list_images():
-        return cat.list_images()
+    def list_images(req: Request):
+        return cat.list_images(user_id=req.state.user["id"])
 
     @app.post("/api/images", status_code=201)
     async def upload(req: Request, file: UploadFile = File(...), display_name: Optional[str] = Form(None), detect: bool = Form(True)):
@@ -115,7 +207,7 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
             raise HTTPException(400, "empty file")
         if len(data) > MAX_UPLOAD:
             raise HTTPException(413, "file too large (15 MB max)")
-        return cat.add_image(data, display_name, file.filename, detect=detect)
+        return cat.add_image(data, display_name, file.filename, detect=detect, user_id=req.state.user["id"])
 
     @app.get("/api/images/{image_id}")
     def get_image(image_id: str):
@@ -135,8 +227,8 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
         return cat.restore_image(image_id)
 
     @app.get("/api/trash")
-    def trash():
-        return cat.list_trash()
+    def trash(req: Request):
+        return cat.list_trash(user_id=req.state.user["id"])
 
     @app.delete("/api/trash/{image_id}")
     def purge(image_id: str):
@@ -144,8 +236,8 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
         return {"purged": image_id}
 
     @app.delete("/api/trash")
-    def empty_trash():
-        return {"purged": cat.empty_trash()}
+    def empty_trash(req: Request):
+        return {"purged": cat.empty_trash(user_id=req.state.user["id"])}
 
     @app.post("/api/images/{image_id}/edit", status_code=201)
     def edit_image(image_id: str, body: EditReq):
@@ -156,13 +248,13 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
         return cat.polygons(image_id)
 
     @app.get("/api/classes")
-    def classes():
-        return cat.classes()
+    def classes(req: Request):
+        return cat.classes(user_id=req.state.user["id"])
 
     @app.patch("/api/classes/{label:path}")
-    def class_color(label: str, body: ClassPatch):
+    def class_color(label: str, body: ClassPatch, req: Request):
         try:
-            return cat.set_class_color(label, body.color)
+            return cat.set_class_color(label, body.color, user_id=req.state.user["id"])
         except imageops.EditError as e:
             raise HTTPException(422, str(e))
 
@@ -246,16 +338,16 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
 
     # ------------------------------------------------------------------ intelligent planner & generator
     @app.post("/api/planner/interpret")
-    def planner_interpret(body: InterpretReq):
+    def planner_interpret(body: InterpretReq, req: Request):
         from .planner import plan_prompt
-        p = plan_prompt(body.instruction, cat, model_name=body.model_name or "gemini-2.5-flash")
+        p = plan_prompt(body.instruction, cat, model_name=body.model_name or "gemini-2.5-flash", user_id=req.state.user["id"])
         return {"plan": p, **p}
 
     @app.post("/api/generator/generate", status_code=201)
-    def generate_image_api(body: GenerateReq):
+    def generate_image_api(body: GenerateReq, req: Request):
         return compose.compose(cat, body.prompt, width=body.width, height=body.height,
                                name=body.name, mode="ai_generated", ai_style=body.style or "realistic",
-                               user_id=None)
+                               user_id=req.state.user["id"])
 
     @app.get("/api/benchmark")
     def benchmark_api():
@@ -264,19 +356,19 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
 
     # ------------------------------------------------------------------ composition
     @app.post("/api/compose/plan")
-    def compose_plan(body: ComposeReq):
-        p = compose.plan(cat, body.instruction, llm=body.llm, mode=body.mode)
+    def compose_plan(body: ComposeReq, req: Request):
+        p = compose.plan(cat, body.instruction, llm=body.llm, mode=body.mode, user_id=req.state.user["id"])
         return {k: v for k, v in p.items() if not k.startswith("_")}
 
     @app.post("/api/compose", status_code=201)
-    def compose_run(body: ComposeReq):
+    def compose_run(body: ComposeReq, req: Request):
         return compose.compose(cat, body.instruction, body.width, body.height, body.background,
                                body.allow_partial, body.name, body.llm, mode=body.mode,
-                               ai_style=body.ai_style or "realistic")
+                               ai_style=body.ai_style or "realistic", user_id=req.state.user["id"])
 
     # ------------------------------------------------------------------ demo helpers
     @app.post("/api/seed")
-    def seed():
+    def seed(req: Request):
         """Load the assignment's test catalog (skips ones already present)."""
         added, skipped = [], []
         for name in SEED_ORDER + ["blank", "low_contrast"]:
@@ -284,7 +376,7 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
             if not p.exists():
                 continue
             try:
-                cat.add_image(p.read_bytes(), name, p.name)
+                cat.add_image(p.read_bytes(), name, p.name, user_id=req.state.user["id"])
                 added.append(name)
             except Duplicate:
                 skipped.append(name)
@@ -293,7 +385,7 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
     @app.get("/api/health")
     def health():
         from .detector import DETECTOR_VERSION, _YOLOX
-        return {"ok": True, "detector": DETECTOR_VERSION, "neural_model": _YOLOX.available(), "images": len(cat.list_images())}
+        return {"ok": True, "detector": DETECTOR_VERSION, "neural_model": _YOLOX.available()}
 
     @app.get("/")
     def index():

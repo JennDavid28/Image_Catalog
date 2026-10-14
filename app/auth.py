@@ -1,15 +1,12 @@
 """User Authentication & Profile Management Service.
 
 Provides:
-- User accounts (admin, designer, custom users) with secure password hashing.
+- User accounts with secure password hashing.
 - Token-based session management (persistent in localStorage).
 - Per-user data isolation and statistics.
-- Pre-seeded default accounts ('admin' and 'demo') for out-of-the-box readiness.
 """
 from __future__ import annotations
 import hashlib
-import json
-import os
 import secrets
 import sqlite3
 import threading
@@ -74,36 +71,19 @@ class AuthService:
         with self._lock:
             with self._conn() as c:
                 c.executescript(AUTH_SCHEMA)
-                # Seed default users if not present
-                admin = c.execute("SELECT id FROM users WHERE username='admin'").fetchone()
-                if not admin:
-                    salt = secrets.token_hex(16)
-                    h = _hash_password("admin123", salt)
-                    c.execute(
-                        "INSERT INTO users (id, username, password_hash, salt, display_name, email, role, avatar_color, created_at) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        ("user-admin", "admin", h, salt, "Administrator", "admin@imgcatalog.local", "Admin", "#6c63ff", _now())
-                    )
-
-                demo = c.execute("SELECT id FROM users WHERE username='demo'").fetchone()
-                if not demo:
-                    salt = secrets.token_hex(16)
-                    h = _hash_password("demo123", salt)
-                    c.execute(
-                        "INSERT INTO users (id, username, password_hash, salt, display_name, email, role, avatar_color, created_at) "
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        ("user-demo", "demo", h, salt, "Demo Creator", "demo@imgcatalog.local", "Designer", "#10b981", _now())
-                    )
-
+                # Remove legacy, publicly documented demo accounts from older databases.
+                c.execute("DELETE FROM users WHERE id IN ('user-admin', 'user-demo') OR username IN ('admin', 'demo')")
     def register(self, username: str, password: str, display_name: str | None = None,
                  email: str | None = None, role: str = "Designer") -> Tuple[str, Dict[str, Any]]:
         username = username.strip().lower()
         if len(username) < 3:
             raise ValueError("Username must be at least 3 characters")
-        if len(password) < 4:
-            raise ValueError("Password must be at least 4 characters")
+        if len(password) < 8:
+            raise ValueError("Password must be at least 8 characters")
 
-        disp = (display_name or username).strip()
+        disp = (display_name or "").strip()
+        if not disp:
+            raise ValueError("Name is required")
         color = secrets.choice(AVATAR_COLORS)
         salt = secrets.token_hex(16)
         pw_hash = _hash_password(password, salt)
@@ -117,7 +97,7 @@ class AuthService:
                 c.execute(
                     "INSERT INTO users (id, username, password_hash, salt, display_name, email, role, avatar_color, created_at, last_login) "
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (user_id, username, pw_hash, salt, disp, email or "", role, color, _now(), _now())
+                    (user_id, username, pw_hash, salt, disp, email or "", "Designer", color, _now(), _now())
                 )
                 token = self._create_session(c, user_id)
                 user = self._user_dict(c.execute("SELECT * FROM users WHERE id=?", (user_id,)).fetchone())
@@ -155,10 +135,13 @@ class AuthService:
         with self._lock:
             with self._conn() as c:
                 row = c.execute(
-                    "SELECT u.* FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token=?",
+                    "SELECT u.*, s.expires_at FROM sessions s JOIN users u ON s.user_id = u.id WHERE s.token=?",
                     (token,)
                 ).fetchone()
                 if not row:
+                    return None
+                if datetime.fromisoformat(row["expires_at"]) <= datetime.now(timezone.utc):
+                    c.execute("DELETE FROM sessions WHERE token=?", (token,))
                     return None
                 return self._user_dict(row)
 
@@ -174,17 +157,17 @@ class AuthService:
             with self._conn() as c:
                 # Images total
                 images_count = c.execute(
-                    "SELECT COUNT(*) as c FROM images WHERE trashed_at IS NULL AND (user_id=? OR user_id IS NULL)",
+                    "SELECT COUNT(*) as c FROM images WHERE trashed_at IS NULL AND user_id=?",
                     (user_id,)
                 ).fetchone()["c"]
                 # Composites created
                 comp_count = c.execute(
-                    "SELECT COUNT(*) as c FROM images WHERE kind='composite' AND trashed_at IS NULL AND (user_id=? OR user_id IS NULL)",
+                    "SELECT COUNT(*) as c FROM images WHERE kind='composite' AND trashed_at IS NULL AND user_id=?",
                     (user_id,)
                 ).fetchone()["c"]
                 # Objects count
                 obj_count = c.execute(
-                    "SELECT COUNT(*) as c FROM objects o JOIN images i ON o.image_id=i.id WHERE o.deleted=0 AND (i.user_id=? OR i.user_id IS NULL)",
+                    "SELECT COUNT(*) as c FROM objects o JOIN images i ON o.image_id=i.id WHERE o.deleted=0 AND i.user_id=?",
                     (user_id,)
                 ).fetchone()["c"]
                 # Trashed count
@@ -212,7 +195,3 @@ class AuthService:
             "created_at": row["created_at"],
             "last_login": row["last_login"]
         }
-
-
-# Singleton auth service
-AUTH_SERVICE = AuthService()

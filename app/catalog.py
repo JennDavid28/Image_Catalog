@@ -49,7 +49,7 @@ CREATE INDEX IF NOT EXISTS ix_obj_img ON objects(image_id);
 CREATE TABLE IF NOT EXISTS events(
   id INTEGER PRIMARY KEY AUTOINCREMENT, image_id TEXT, object_id TEXT, ts TEXT, action TEXT, detail TEXT);
 CREATE INDEX IF NOT EXISTS ix_evt_img ON events(image_id);
-CREATE TABLE IF NOT EXISTS classes(label TEXT PRIMARY KEY, color TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS classes(user_id TEXT NOT NULL, label TEXT NOT NULL, color TEXT NOT NULL, PRIMARY KEY(user_id,label));
 """
 PALETTE = ["#6c63ff", "#22c55e", "#f97316", "#06b6d4", "#eab308", "#ef4444", "#a855f7", "#3b82f6", "#ec4899", "#14b8a6",
            "#84cc16", "#f43f5e", "#8b5cf6", "#0ea5e9", "#d946ef", "#10b981", "#f59e0b", "#64748b"]
@@ -91,6 +91,12 @@ class Catalog:
                 c.execute("ALTER TABLE images ADD COLUMN trashed_at TEXT")
             if "user_id" not in cols:
                 c.execute("ALTER TABLE images ADD COLUMN user_id TEXT DEFAULT 'user-admin'")
+            class_cols = {r["name"] for r in c.execute("PRAGMA table_info(classes)")}
+            if "user_id" not in class_cols:
+                c.execute("ALTER TABLE classes RENAME TO classes_legacy")
+                c.execute("CREATE TABLE classes(user_id TEXT NOT NULL, label TEXT NOT NULL, color TEXT NOT NULL, PRIMARY KEY(user_id,label))")
+                c.execute("INSERT INTO classes(user_id,label,color) SELECT 'user-admin',label,color FROM classes_legacy")
+                c.execute("DROP TABLE classes_legacy")
 
     # ------------------------------------------------------------------ plumbing
     @contextmanager
@@ -179,9 +185,10 @@ class Catalog:
             raise CatalogError(f"not a readable image: {e}")
         bgr = _decode(data)
         h, w = bgr.shape[:2]
+        owner_id = user_id or "user-admin"
         with self._conn() as c:
             if kind == "source":
-                dup = c.execute("SELECT id FROM images WHERE sha256=? AND kind='source'", (sha,)).fetchone()
+                dup = c.execute("SELECT id FROM images WHERE sha256=? AND kind='source' AND user_id=?", (sha, owner_id)).fetchone()
                 if dup:
                     raise Duplicate(dup["id"])
             image_id = _uid()
@@ -189,7 +196,7 @@ class Catalog:
             c.execute("INSERT INTO images(id,kind,filename,sha256,width,height,format,bytes,created_at,display_name,provenance,user_id)"
                       " VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
                       (image_id, kind, filename, sha, w, h, fmt, len(data), _now(), name,
-                       json.dumps(provenance) if provenance else None, user_id or "user-admin"))
+                       json.dumps(provenance) if provenance else None, owner_id))
             (self.dir / "images" / f"{image_id}.{fmt}").write_bytes(data)
             self._log(c, image_id, None, "image_added", {"filename": filename, "kind": kind})
         if detect:
@@ -204,7 +211,7 @@ class Catalog:
         with self._conn() as c:
             if user_id:
                 rows = c.execute(
-                    "SELECT * FROM images WHERE trashed_at IS NULL AND (user_id=? OR kind='source') ORDER BY created_at, rowid",
+                    "SELECT * FROM images WHERE trashed_at IS NULL AND user_id=? ORDER BY created_at, rowid",
                     (user_id,)
                 ).fetchall()
             else:
@@ -418,11 +425,12 @@ class Catalog:
         return self.get_image(img["id"])
 
     # ------------------------------------------------------------------ assets for composition
-    def live_objects(self) -> list[dict]:
+    def live_objects(self, user_id: str | None = None) -> list[dict]:
         """All non-deleted objects joined with their image display name/kind (used by the composer)."""
         with self._conn() as c:
-            rows = c.execute("SELECT o.*, i.display_name AS img_name, i.kind AS img_kind, i.width AS img_w, i.height AS img_h "
-                             "FROM objects o JOIN images i ON i.id=o.image_id WHERE o.deleted=0 AND i.trashed_at IS NULL").fetchall()
+            query = ("SELECT o.*, i.display_name AS img_name, i.kind AS img_kind, i.width AS img_w, i.height AS img_h "
+                     "FROM objects o JOIN images i ON i.id=o.image_id WHERE o.deleted=0 AND i.trashed_at IS NULL")
+            rows = c.execute(query + (" AND i.user_id=?" if user_id else ""), (user_id,) if user_id else ()).fetchall()
         out = []
         for r in rows:
             d = self._obj_dict(r)
@@ -482,10 +490,10 @@ class Catalog:
         with self._conn() as c:
             if user_id:
                 imgs = [self._img_dict(c, r, with_objects=False) for r in
-                        c.execute("SELECT * FROM images WHERE trashed_at IS NOT NULL AND (user_id=? OR user_id IS NULL) ORDER BY trashed_at DESC", (user_id,)).fetchall()]
+                        c.execute("SELECT * FROM images WHERE trashed_at IS NOT NULL AND user_id=? ORDER BY trashed_at DESC", (user_id,)).fetchall()]
                 objs = []
                 for r in c.execute("SELECT o.*, i.display_name AS img_name FROM objects o JOIN images i ON i.id=o.image_id "
-                                   "WHERE o.deleted=1 AND i.trashed_at IS NULL AND (i.user_id=? OR i.user_id IS NULL) ORDER BY o.updated_at DESC", (user_id,)).fetchall():
+                                   "WHERE o.deleted=1 AND i.trashed_at IS NULL AND i.user_id=? ORDER BY o.updated_at DESC", (user_id,)).fetchall():
                     d = self._obj_dict(r); d["image_name"] = r["img_name"]; objs.append(d)
             else:
                 imgs = [self._img_dict(c, r, with_objects=False) for r in
@@ -511,29 +519,33 @@ class Catalog:
         return len(ids)
 
     # ------------------------------------------------------------------ classes (label colours shown on the canvas)
-    def _class_color(self, c, label: str) -> str:
-        r = c.execute("SELECT color FROM classes WHERE label=?", (label,)).fetchone()
+    def _class_color(self, c, label: str, user_id: str | None = None) -> str:
+        user_id = user_id or "user-admin"
+        r = c.execute("SELECT color FROM classes WHERE user_id=? AND label=?", (user_id, label)).fetchone()
         if r:
             return r["color"]
-        used = {x["color"] for x in c.execute("SELECT color FROM classes")}
+        used = {x["color"] for x in c.execute("SELECT color FROM classes WHERE user_id=?", (user_id,))}
         free = [p for p in PALETTE if p not in used]
         color = free[0] if free else PALETTE[int(hashlib.md5(label.encode()).hexdigest(), 16) % len(PALETTE)]
-        c.execute("INSERT INTO classes(label,color) VALUES(?,?)", (label, color))
+        c.execute("INSERT INTO classes(user_id,label,color) VALUES(?,?,?)", (user_id, label, color))
         return color
 
-    def classes(self) -> list[dict]:
+    def classes(self, user_id: str | None = None) -> list[dict]:
         """Every label in use (non-trashed images), with its overlay colour and how many objects carry it."""
         with self._conn() as c:
-            rows = c.execute("SELECT o.label AS label, COUNT(*) AS n FROM objects o JOIN images i ON i.id=o.image_id "
-                             "WHERE o.deleted=0 AND i.trashed_at IS NULL GROUP BY o.label ORDER BY n DESC, o.label").fetchall()
-            return [{"label": r["label"], "count": r["n"], "color": self._class_color(c, r["label"])} for r in rows]
+            query = ("SELECT o.label AS label, COUNT(*) AS n FROM objects o JOIN images i ON i.id=o.image_id "
+                     "WHERE o.deleted=0 AND i.trashed_at IS NULL")
+            rows = c.execute(query + (" AND i.user_id=?" if user_id else "") + " GROUP BY o.label ORDER BY n DESC, o.label",
+                              (user_id,) if user_id else ()).fetchall()
+            return [{"label": r["label"], "count": r["n"], "color": self._class_color(c, r["label"], user_id)} for r in rows]
 
-    def set_class_color(self, label: str, color: str) -> dict:
+    def set_class_color(self, label: str, color: str, user_id: str | None = None) -> dict:
         r, g, b_ = imageops.hex_to_rgb(color)                       # validates 3- and 6-digit hex
         color = f"#{r:02x}{g:02x}{b_:02x}"
         with self._conn() as c:
-            c.execute("INSERT INTO classes(label,color) VALUES(?,?) ON CONFLICT(label) DO UPDATE SET color=excluded.color",
-                      (label, color))
+            owner_id = user_id or "user-admin"
+            c.execute("INSERT INTO classes(user_id,label,color) VALUES(?,?,?) ON CONFLICT(user_id,label) DO UPDATE SET color=excluded.color",
+                      (owner_id, label, color))
         return {"label": label, "color": color}
 
     # ------------------------------------------------------------------ mask outlines for the translucent overlay
@@ -542,10 +554,10 @@ class Catalog:
         bgr = self.read_bgr(image_id)
         out = {}
         with self._conn() as c:
-            self._img_row(c, image_id)
+            img_row = self._img_row(c, image_id)
             rows = c.execute("SELECT * FROM objects WHERE image_id=? AND deleted=0", (image_id,)).fetchall()
             for r in rows:
-                color = self._class_color(c, r["label"])
+                color = self._class_color(c, r["label"], img_row["user_id"])
                 x, y, w, h = r["x"], r["y"], r["w"], r["h"]
                 m = self._clipped_mask(r, bgr)
                 s = min(1.0, 640 / max(m.shape))
@@ -627,7 +639,7 @@ class Catalog:
         prov = {"edited_from": image_id, "edited_from_name": src["display_name"], "op": op,
                 "params": {k: v for k, v in params.items() if k != "object_ids"}}
         try:
-            img = self.add_image(data, new_name, filename=f"{image_id}-{op}.png", provenance=prov)
+            img = self.add_image(data, new_name, filename=f"{image_id}-{op}.png", provenance=prov, user_id=src["user_id"])
         except Duplicate as e:
             raise CatalogError(f"the result is identical to an image already in the catalog ({e.existing_id})")
         with self._conn() as c:

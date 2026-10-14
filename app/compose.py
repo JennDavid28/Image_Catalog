@@ -511,24 +511,24 @@ def render(leaves: list[Leaf], catalog, W: int, H: int, background: str | np.nda
 
 
 # ----------------------------------------------------------------------------- public API
-def plan(catalog, instruction: str, llm: bool = False, mode: str | None = None) -> dict:
+def plan(catalog, instruction: str, llm: bool = False, mode: str | None = None, user_id: str | None = None) -> dict:
     """Parse + resolve without rendering (the UI shows this as a preview)."""
     from .planner import plan_prompt
     effective_mode = mode
 
     parsed = None
     if llm:
-        parsed = llm_plan(instruction, catalog)
+        parsed = llm_plan(instruction, catalog, user_id=user_id)
     if parsed is None:
         parsed = parse_instruction(instruction)
 
     # Intelligent prompt understanding if requested
-    llm_info = plan_prompt(instruction, catalog) if (llm or mode in ("hybrid", "ai_generated")) else {}
+    llm_info = plan_prompt(instruction, catalog, user_id=user_id) if (llm or mode in ("hybrid", "ai_generated")) else {}
     if not effective_mode and llm_info.get("generation_mode"):
         effective_mode = llm_info["generation_mode"]
     effective_mode = effective_mode or "assets_only"
 
-    objects = [o for o in catalog.live_objects() if o["image_kind"] == "source"]   # never reuse composites as assets
+    objects = [o for o in catalog.live_objects(user_id) if o["image_kind"] == "source"]   # never reuse composites as assets
     resolved, missing, suggestions = resolve(parsed["items"], objects)
     ai_generated_elements = []
     if effective_mode == "hybrid":
@@ -567,7 +567,7 @@ def compose(catalog, instruction: str, width: int = 1024, height: int = 768, bac
             mode: str | None = None, ai_style: str = "realistic", user_id: str | None = None) -> dict:
     from .generator import IMAGE_GENERATOR
 
-    p = plan(catalog, instruction, llm=llm, mode=mode)
+    p = plan(catalog, instruction, llm=llm, mode=mode, user_id=user_id)
     public = {k: v for k, v in p.items() if not k.startswith("_")}
     gen_mode = mode or p.get("generation_mode", "assets_only")
 
@@ -701,7 +701,7 @@ Request: {request}"""
 
 
 # In compose.py
-def llm_plan(instruction: str, catalog, transport=None):
+def llm_plan(instruction: str, catalog, transport=None, user_id: str | None = None):
     """Uses Gemini instead of Anthropic for optional LLM scene planning."""
     key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if transport is None and not key:
@@ -709,7 +709,7 @@ def llm_plan(instruction: str, catalog, transport=None):
         fallback["_llm"] = False
         return fallback
         
-    vocab = sorted({norm_label(o["label"]) for o in catalog.live_objects() if o["image_kind"] == "source"} | set(CATEGORIES))
+    vocab = sorted({norm_label(o["label"]) for o in catalog.live_objects(user_id) if o["image_kind"] == "source"} | set(CATEGORIES))
     prompt = LLM_PROMPT.format(vocab=json.dumps(vocab), request=instruction)
     
     try:

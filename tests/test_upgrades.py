@@ -16,7 +16,10 @@ from tests.conftest import img_bytes
 
 @pytest.fixture()
 def client(tmp_path):
-    return TestClient(create_app(tmp_path / "store"))
+    client = TestClient(create_app(tmp_path / "store"))
+    client.post("/api/auth/register", json={"username": "tester", "display_name": "Test User", "password": "testpass123"})
+    client.headers["Authorization"] = "Bearer " + client.post("/api/auth/login", json={"username": "tester", "password": "testpass123"}).json()["token"]
+    return client
 
 
 def up(client, name):
@@ -199,34 +202,24 @@ def test_mode_2_hybrid_with_missing_catalog_assets(client):
 # 7. User Authentication & Profile API
 # -----------------------------------------------------------------------------
 def test_auth_login_and_user_stats(client):
-    # 1. Login as default admin
-    r_log = client.post("/api/auth/login", json={"username": "admin", "password": "admin123"})
+    assert client.post("/api/auth/login", json={"username": "admin", "password": "admin123"}).status_code == 401
+    assert client.post("/api/auth/login", json={"username": "tester", "password": "short"}).status_code == 401
+    r_log = client.post("/api/auth/login", json={"username": "tester", "password": "testpass123"})
     assert r_log.status_code == 200
-    admin_data = r_log.json()
-    token = admin_data["token"]
-    assert token
-    assert admin_data["user"]["username"] == "admin"
-
-    # 2. Call /api/auth/me with Bearer token
+    token = r_log.json()["token"]
     r_me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"})
     assert r_me.status_code == 200
-    assert r_me.json()["user"]["username"] == "admin"
+    assert r_me.json()["user"]["username"] == "tester"
     assert "stats" in r_me.json()
-
-    # 3. Register a new user
     r_reg = client.post("/api/auth/register", json={
         "username": "ivan",
         "password": "password123",
         "display_name": "Ivan Ajay David",
-        "email": "ivan@example.com",
-        "role": "Lead Designer"
     })
     assert r_reg.status_code == 201
     ivan_token = r_reg.json()["token"]
     assert ivan_token
     assert r_reg.json()["user"]["display_name"] == "Ivan Ajay David"
-
-    # 4. Upload an image as Ivan
     r_up = client.post(
         "/api/images",
         files={"file": ("ivan_apple.png", img_bytes("apple"), "image/png")},
@@ -234,6 +227,36 @@ def test_auth_login_and_user_stats(client):
     )
     assert r_up.status_code == 201
     assert r_up.json()["user_id"] == r_reg.json()["user"]["id"]
+    assert "auth_token" in r_reg.cookies and "httponly" in r_reg.headers.get("set-cookie", "").lower()
+    assert client.get("/api/images").json() == []
+    assert client.get("/api/images", headers={"Authorization": f"Bearer {ivan_token}"}).json()[0]["id"] == r_up.json()["id"]
+    assert client.get(f"/api/images/{r_up.json()['id']}").status_code == 404
+    assert client.get(f"/api/images/{r_up.json()['id']}", headers={"Authorization": f"Bearer {ivan_token}"}).status_code == 200
+    media_client = TestClient(client.app)
+    assert media_client.get("/api/auth/me", headers={"Authorization": f"Bearer {ivan_token}"}).status_code == 200
+    assert media_client.cookies.get("auth_token") == ivan_token
+    assert media_client.get(f"/api/images/{r_up.json()['id']}/thumb?size=120").status_code == 200
+    assert media_client.get(f"/api/images/{r_up.json()['id']}/file").status_code == 200
+
+
+def test_register_accepts_name_field_and_requires_a_name(client):
+    r = client.post("/api/auth/register", json={"username": "nameduser", "name": "Named User", "password": "longpass123"})
+    assert r.status_code == 201 and r.json()["user"]["display_name"] == "Named User"
+    missing = client.post("/api/auth/register", json={"username": "noname", "password": "longpass123"})
+    assert missing.status_code == 400 and "Name is required" in missing.json()["detail"]
+
+
+def test_catalog_api_requires_auth_and_expired_tokens_fail(client):
+    from datetime import datetime, timedelta, timezone
+    token = client.headers["Authorization"].split(" ", 1)[1]
+    client.headers.pop("Authorization")
+    client.cookies.clear()
+    assert client.get("/api/images").status_code == 401
+    client.headers["Authorization"] = f"Bearer {token}"
+    with client.app.state.auth._conn() as conn:
+        expired = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat(timespec="seconds")
+        conn.execute("UPDATE sessions SET expires_at=? WHERE token=?", (expired, token))
+    assert client.get("/api/images").status_code == 401
 
 
 # -----------------------------------------------------------------------------

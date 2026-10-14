@@ -119,11 +119,11 @@ def _call_gemini_flash(prompt: str, api_key: str, model_name: str = DEFAULT_GEMI
     raise RuntimeError("google-genai could not fulfill the request with the configured model.")
 
 
-def format_catalog_summary(catalog) -> str:
+def format_catalog_summary(catalog, user_id: str | None = None) -> str:
     """Summarize available catalog assets for the LLM context."""
     if catalog is None:
         return "Catalog is empty."
-    live = [o for o in catalog.live_objects() if o.get("image_kind") == "source" and not o.get("deleted")]
+    live = [o for o in catalog.live_objects(user_id) if o.get("image_kind") == "source" and not o.get("deleted")]
     if not live:
         return "No source assets currently in catalog."
     summary_lines = []
@@ -137,10 +137,10 @@ def format_catalog_summary(catalog) -> str:
     return "\n".join(summary_lines)
 
 
-def parse_prompt_heuristic(instruction: str, catalog=None) -> dict:
+def parse_prompt_heuristic(instruction: str, catalog=None, user_id: str | None = None) -> dict:
     """High-quality deterministic fallback planner when no LLM key is configured."""
     text = instruction.strip().lower()
-    live_objects = [o for o in catalog.live_objects() if o.get("image_kind") == "source" and not o.get("deleted")] if catalog else []
+    live_objects = [o for o in catalog.live_objects(user_id) if o.get("image_kind") == "source" and not o.get("deleted")] if catalog else []
 
     ai_keywords = [
         "generate a", "create a picture of", "realistic", "photograph", "scene",
@@ -228,10 +228,11 @@ def parse_prompt_heuristic(instruction: str, catalog=None) -> dict:
     }
 
 
-def plan_prompt(instruction: str, catalog=None, model_name: str = DEFAULT_GEMINI_MODEL, api_key: Optional[str] = None) -> dict:
+def plan_prompt(instruction: str, catalog=None, model_name: str = DEFAULT_GEMINI_MODEL, api_key: Optional[str] = None,
+                user_id: str | None = None) -> dict:
     """Main entrypoint: interpret prompt into structured plan using Gemini Flash or heuristic fallback."""
     key = api_key or _get_api_key()
-    catalog_summary = format_catalog_summary(catalog)
+    catalog_summary = format_catalog_summary(catalog, user_id)
 
     if key:
         full_prompt = SYSTEM_PROMPT.format(catalog_assets=catalog_summary) + f"\n\nUser Request: {instruction}\nJSON Response:"
@@ -247,8 +248,8 @@ def plan_prompt(instruction: str, catalog=None, model_name: str = DEFAULT_GEMINI
                 data.setdefault("asset_placements", [])
                 return data
         except Exception as e:
-            fallback = parse_prompt_heuristic(instruction, catalog)
+            fallback = parse_prompt_heuristic(instruction, catalog, user_id)
             fallback["explanation"] += f" (LLM note: {type(e).__name__}, used heuristic planner)"
             return fallback
 
-    return parse_prompt_heuristic(instruction, catalog)
+    return parse_prompt_heuristic(instruction, catalog, user_id)

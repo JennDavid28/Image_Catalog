@@ -12,7 +12,10 @@ from tests.conftest import img_bytes
 
 @pytest.fixture()
 def client(tmp_path):
-    return TestClient(create_app(tmp_path / "store"))
+    client = TestClient(create_app(tmp_path / "store"))
+    client.post("/api/auth/register", json={"username": "tester", "display_name": "Test User", "password": "testpass123"})
+    client.headers["Authorization"] = "Bearer " + client.post("/api/auth/login", json={"username": "tester", "password": "testpass123"}).json()["token"]
+    return client
 
 
 def up(client, name):
@@ -201,6 +204,24 @@ def test_open_vocab_results_merge_with_yolox(monkeypatch):
     assert "pencil" in labels and "gizmo" in labels
     pen = next(d for d in r.objects if d.label == "pencil"); assert pen.attrs["source"] == "open-vocab" and "open-vocabulary" in pen.evidence[0]
     assert r.route.endswith("open-vocabulary")
+
+
+def test_yolo_world_gets_generic_vocabulary_on_normal_detection(monkeypatch):
+    from app.yoloworld import YOLOWORLD
+    captured = {}
+    monkeypatch.setattr(YOLOWORLD, "available", lambda: True)
+    def fake_world_detect(bgr, classes, **kwargs):
+        captured["classes"] = classes
+        return [], 1.0
+    monkeypatch.setattr(YOLOWORLD, "detect", fake_world_detect)
+    monkeypatch.setattr(detector.OPENVOCAB, "available", lambda: False)
+
+    class NoYoloX:
+        def available(self): return False
+
+    _, _, world_used = detector._proposals(np.zeros((32, 32, 3), np.uint8), NoYoloX(), 0.15, ["gizmo"])
+    assert world_used is True
+    assert {"laptop", "cup", "remote", "gizmo"} <= set(captured["classes"])
 
 
 def test_openvocab_degrades_quietly_without_torch():
