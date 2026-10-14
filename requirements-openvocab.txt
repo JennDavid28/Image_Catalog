@@ -1,0 +1,4 @@
+# Optional: lets the detector name (almost) any object, not just the 80 COCO classes.
+# Needs ~600 MB for the OWLv2 weights, downloaded on first use (or set OPENVOCAB_MODEL to a local folder).
+torch>=2.1
+transformers>=4.40

@@ -1,0 +1,9 @@
+__pycache__/
+.pytest_cache/
+data/store/
+*.pyc
+.env
+.env.*
+!.env.example
+
+weights/clip/ViT-B-32.pt

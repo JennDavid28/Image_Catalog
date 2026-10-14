@@ -1,0 +1,92 @@
+{
+  "id": "12fdc23014",
+  "kind": "source",
+  "auto": {
+    "width": 512,
+    "height": 800,
+    "format": "png",
+    "bytes": 520371,
+    "sha256": "38ce5d0ed710419e4f35775860ebcaeb923177a10023c5cf4c28983d91628eb4",
+    "created_at": "2026-10-11T11:35:11+00:00",
+    "filename": "boy.png",
+    "detection_status": "low_confidence",
+    "detector_version": "hybrid-1.0 (classical + YOLOX-nano + GrabCut)",
+    "detected_at": "2026-10-11T11:35:11+00:00",
+    "route": "flat-background",
+    "detection_message": "",
+    "detection_ms": 147.5,
+    "dominant_colors": [
+      "blue",
+      "green",
+      "peach",
+      "brown"
+    ],
+    "object_count": 1,
+    "provenance": null
+  },
+  "user": {
+    "display_name": "boy",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 1,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "1ba537a73c",
+      "image_id": "12fdc23014",
+      "label": "boy",
+      "color": "green/blue",
+      "confidence": 0.58,
+      "bbox": [
+        152,
+        49,
+        209,
+        630
+      ],
+      "origin": "auto",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": {
+        "label": "boy",
+        "color": "green/blue",
+        "confidence": 0.58,
+        "bbox": [
+          152,
+          49,
+          209,
+          630
+        ]
+      },
+      "reviewed": false,
+      "needs_review": true,
+      "deleted": false,
+      "attrs": {
+        "kind": "cartoon person",
+        "clothing": {
+          "top": "green",
+          "bottom": "blue",
+          "shoes": "black"
+        },
+        "skin": "peach",
+        "hair": "brown",
+        "silhouette_flare": 0.63
+      },
+      "evidence": [
+        "figure rule: round skin-tone head at top with clothing regions below -> cartoon person",
+        "silhouette flare ratio 0.63 (trousers) -> 'boy' (cartoon-convention heuristic, low certainty - verify)"
+      ],
+      "mask_source": "detector",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:11+00:00",
+      "updated_at": "2026-10-11T11:35:11+00:00"
+    }
+  ]
+}

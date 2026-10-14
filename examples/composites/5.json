@@ -1,0 +1,222 @@
+{
+  "id": "dacb2711bd",
+  "kind": "composite",
+  "auto": {
+    "width": 1024,
+    "height": 768,
+    "format": "png",
+    "bytes": 120051,
+    "sha256": "a39f4cc04cc6d08aa604f9cd0f42d27c25781315c7abdc4b0327ab239b673a1e",
+    "created_at": "2026-10-11T11:35:16+00:00",
+    "filename": null,
+    "detection_status": "composed",
+    "detector_version": "composition-plan",
+    "detected_at": "2026-10-11T11:35:16+00:00",
+    "route": "composition",
+    "detection_message": "objects registered from the composition plan (not detected)",
+    "detection_ms": null,
+    "dominant_colors": [],
+    "object_count": 2,
+    "provenance": {
+      "instruction": "a red circle in front of a blue square",
+      "plan": {
+        "instruction": "a red circle in front of a blue square",
+        "canvas": {
+          "background": "white"
+        },
+        "warnings": [],
+        "planner": "rules",
+        "items": [
+          {
+            "id": "i1",
+            "text": "a red circle",
+            "label": "circle",
+            "count": 1,
+            "color": "red",
+            "size": 1.0,
+            "anchor": null,
+            "group": false,
+            "relation_to_previous": "adjacent"
+          },
+          {
+            "id": "i2",
+            "text": "a blue square",
+            "label": "square",
+            "count": 1,
+            "color": "blue",
+            "size": 1.0,
+            "anchor": null,
+            "group": false,
+            "relation_to_previous": "in_front"
+          }
+        ],
+        "resolved": [
+          {
+            "item": "i1",
+            "assets": [
+              {
+                "object_id": "53f13c5037",
+                "image_id": "d71720ee5d",
+                "image_name": "shapes",
+                "label": "circle",
+                "color": "red",
+                "confidence": 0.95,
+                "origin": "auto"
+              }
+            ]
+          },
+          {
+            "item": "i2",
+            "assets": [
+              {
+                "object_id": "ad3a25cf23",
+                "image_id": "d71720ee5d",
+                "image_name": "shapes",
+                "label": "square",
+                "color": "blue",
+                "confidence": 0.95,
+                "origin": "auto"
+              }
+            ]
+          }
+        ],
+        "missing": [],
+        "suggestions": {}
+      },
+      "placements": [
+        {
+          "item_id": "i2",
+          "asset_object_id": "ad3a25cf23",
+          "asset_image_id": "d71720ee5d",
+          "asset_image_name": "shapes",
+          "label": "square",
+          "color": "blue",
+          "bbox": [
+            468,
+            267,
+            233,
+            233
+          ],
+          "z": -0.5,
+          "scale": 1.207
+        },
+        {
+          "item_id": "i1",
+          "asset_object_id": "53f13c5037",
+          "asset_image_id": "d71720ee5d",
+          "asset_image_name": "shapes",
+          "label": "circle",
+          "color": "red",
+          "bbox": [
+            323,
+            267,
+            233,
+            233
+          ],
+          "z": 0.0,
+          "scale": 1.214
+        }
+      ],
+      "canvas": {
+        "width": 1024,
+        "height": 768,
+        "background": "white"
+      },
+      "assets": [
+        {
+          "image_id": "d71720ee5d",
+          "image_name": "shapes"
+        }
+      ],
+      "planner": "rules"
+    }
+  },
+  "user": {
+    "display_name": "composite: a red circle in front of a blue square",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "d2a2528e5a",
+      "image_id": "dacb2711bd",
+      "label": "circle",
+      "color": "red",
+      "confidence": 1.0,
+      "bbox": [
+        323,
+        267,
+        233,
+        233
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "d71720ee5d",
+        "asset_object_id": "53f13c5037",
+        "asset_image_name": "shapes",
+        "z": 0.0,
+        "scale": 1.214
+      },
+      "evidence": [
+        "pasted from 'shapes' (object 53f13c5037)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    },
+    {
+      "id": "008cf0c30c",
+      "image_id": "dacb2711bd",
+      "label": "square",
+      "color": "blue",
+      "confidence": 1.0,
+      "bbox": [
+        468,
+        267,
+        233,
+        233
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "d71720ee5d",
+        "asset_object_id": "ad3a25cf23",
+        "asset_image_name": "shapes",
+        "z": -0.5,
+        "scale": 1.207
+      },
+      "evidence": [
+        "pasted from 'shapes' (object ad3a25cf23)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    }
+  ]
+}

@@ -1,0 +1,197 @@
+{
+  "id": "4c7a40c4da",
+  "kind": "source",
+  "auto": {
+    "width": 640,
+    "height": 640,
+    "format": "png",
+    "bytes": 524538,
+    "sha256": "1aa5e26ba90d82e55b9598395d622d5a456560005bf2a56f25514a5c66e7ac57",
+    "created_at": "2026-10-11T11:35:13+00:00",
+    "filename": "overlapping_shapes.png",
+    "detection_status": "ok",
+    "detector_version": "hybrid-1.0 (classical + YOLOX-nano + GrabCut)",
+    "detected_at": "2026-10-11T11:35:13+00:00",
+    "route": "flat-background",
+    "detection_message": "",
+    "detection_ms": 236.4,
+    "dominant_colors": [
+      "red",
+      "blue",
+      "green"
+    ],
+    "object_count": 3,
+    "provenance": null
+  },
+  "user": {
+    "display_name": "overlapping_shapes",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "0d82050e39",
+      "image_id": "4c7a40c4da",
+      "label": "circle",
+      "color": "red",
+      "confidence": 0.83,
+      "bbox": [
+        68,
+        118,
+        261,
+        261
+      ],
+      "origin": "auto",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": {
+        "label": "circle",
+        "color": "red",
+        "confidence": 0.83,
+        "bbox": [
+          68,
+          118,
+          261,
+          261
+        ]
+      },
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "occluded": true,
+        "amodal_circle": [
+          199.7,
+          249.6,
+          130.8
+        ],
+        "rgb": [
+          224,
+          40,
+          40
+        ]
+      },
+      "evidence": [
+        "flat colour fill (Lab std 1.1) -> geometric shape",
+        "partly hidden behind another shape (50% of outline shared)",
+        "visible arc fits a circle (r=131px, residual 0.002); full extent restored"
+      ],
+      "mask_source": "detector",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:13+00:00",
+      "updated_at": "2026-10-11T11:35:13+00:00"
+    },
+    {
+      "id": "628ae026da",
+      "image_id": "4c7a40c4da",
+      "label": "square",
+      "color": "blue",
+      "confidence": 0.78,
+      "bbox": [
+        268,
+        199,
+        214,
+        213
+      ],
+      "origin": "auto",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": {
+        "label": "square",
+        "color": "blue",
+        "confidence": 0.78,
+        "bbox": [
+          268,
+          199,
+          214,
+          213
+        ]
+      },
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "occluded": true,
+        "rgb": [
+          39,
+          89,
+          225
+        ]
+      },
+      "evidence": [
+        "flat colour fill (Lab std 1.5) -> geometric shape",
+        "partly hidden behind another shape (71% of outline shared)",
+        "two pairs of parallel sides"
+      ],
+      "mask_source": "detector",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:13+00:00",
+      "updated_at": "2026-10-11T11:35:13+00:00"
+    },
+    {
+      "id": "2e77340f62",
+      "image_id": "4c7a40c4da",
+      "label": "triangle",
+      "color": "green",
+      "confidence": 0.74,
+      "bbox": [
+        290,
+        334,
+        230,
+        226
+      ],
+      "origin": "auto",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": {
+        "label": "triangle",
+        "color": "green",
+        "confidence": 0.74,
+        "bbox": [
+          290,
+          334,
+          230,
+          226
+        ]
+      },
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "occluded": true,
+        "apex_restored": true,
+        "rgb": [
+          44,
+          169,
+          70
+        ]
+      },
+      "evidence": [
+        "flat colour fill (Lab std 1.2) -> geometric shape",
+        "partly hidden behind another shape (26% of outline shared)",
+        "trapezoid with converging sides -> triangle whose apex is hidden"
+      ],
+      "mask_source": "detector",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:13+00:00",
+      "updated_at": "2026-10-11T11:35:13+00:00"
+    }
+  ]
+}

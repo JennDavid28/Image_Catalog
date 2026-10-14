@@ -1,0 +1,211 @@
+{
+  "apple": [
+    {
+      "label": "apple",
+      "color": "red",
+      "bbox": [
+        106,
+        132,
+        300,
+        311
+      ]
+    }
+  ],
+  "orange": [
+    {
+      "label": "orange",
+      "color": "orange",
+      "bbox": [
+        106,
+        120,
+        300,
+        300
+      ]
+    }
+  ],
+  "boy": [
+    {
+      "label": "boy",
+      "color": "green/blue",
+      "bbox": [
+        152,
+        50,
+        208,
+        628
+      ]
+    }
+  ],
+  "girl": [
+    {
+      "label": "girl",
+      "color": "purple/pink",
+      "bbox": [
+        136,
+        52,
+        240,
+        633
+      ]
+    }
+  ],
+  "shapes": [
+    {
+      "label": "circle",
+      "color": "red",
+      "bbox": [
+        85,
+        85,
+        190,
+        190
+      ]
+    },
+    {
+      "label": "square",
+      "color": "blue",
+      "bbox": [
+        370,
+        90,
+        190,
+        190
+      ]
+    },
+    {
+      "label": "triangle",
+      "color": "green",
+      "bbox": [
+        100,
+        380,
+        190,
+        180
+      ]
+    },
+    {
+      "label": "rectangle",
+      "color": "yellow",
+      "bbox": [
+        350,
+        400,
+        230,
+        140
+      ]
+    }
+  ],
+  "colors": [
+    {
+      "label": "color swatch",
+      "color": "red",
+      "bbox": [
+        30,
+        60,
+        147,
+        180
+      ]
+    },
+    {
+      "label": "color swatch",
+      "color": "blue",
+      "bbox": [
+        178,
+        60,
+        147,
+        180
+      ]
+    },
+    {
+      "label": "color swatch",
+      "color": "green",
+      "bbox": [
+        326,
+        60,
+        147,
+        180
+      ]
+    },
+    {
+      "label": "color swatch",
+      "color": "yellow",
+      "bbox": [
+        474,
+        60,
+        147,
+        180
+      ]
+    },
+    {
+      "label": "color swatch",
+      "color": "purple",
+      "bbox": [
+        622,
+        60,
+        147,
+        180
+      ]
+    }
+  ],
+  "apple_orange": [
+    {
+      "label": "apple",
+      "color": "red",
+      "bbox": [
+        100,
+        133,
+        280,
+        290
+      ]
+    },
+    {
+      "label": "orange",
+      "color": "orange",
+      "bbox": [
+        525,
+        155,
+        250,
+        250
+      ]
+    }
+  ],
+  "overlapping_shapes": [
+    {
+      "label": "circle",
+      "color": "red",
+      "bbox": [
+        70,
+        120,
+        260,
+        260
+      ]
+    },
+    {
+      "label": "triangle",
+      "color": "green",
+      "bbox": [
+        290,
+        340,
+        230,
+        220
+      ]
+    },
+    {
+      "label": "square",
+      "color": "blue",
+      "bbox": [
+        270,
+        200,
+        210,
+        210
+      ]
+    }
+  ],
+  "blank": [],
+  "low_contrast": [
+    {
+      "label": "circle",
+      "color": "light gray",
+      "bbox": [
+        100,
+        100,
+        200,
+        200
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "id": "0c3336c6a4",
+  "kind": "source",
+  "auto": {
+    "width": 400,
+    "height": 400,
+    "format": "png",
+    "bytes": 162801,
+    "sha256": "30ebd0784938ffd87216416ef89de85eaeab287377e38e68a18ee3261d74c909",
+    "created_at": "2026-10-11T11:35:14+00:00",
+    "filename": "low_contrast.png",
+    "detection_status": "no_objects",
+    "detector_version": "hybrid-1.0 (classical + YOLOX-nano + GrabCut)",
+    "detected_at": "2026-10-11T11:35:14+00:00",
+    "route": "flat-background -> neural second opinion",
+    "detection_message": "Nothing stands out from the background (object may be too faint or absent).",
+    "detection_ms": 54.8,
+    "dominant_colors": [
+      "white",
+      "light gray"
+    ],
+    "object_count": 0,
+    "provenance": null
+  },
+  "user": {
+    "display_name": "low_contrast",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": []
+}

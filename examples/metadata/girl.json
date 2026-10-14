@@ -1,0 +1,92 @@
+{
+  "id": "f165f0a4d0",
+  "kind": "source",
+  "auto": {
+    "width": 512,
+    "height": 800,
+    "format": "png",
+    "bytes": 519113,
+    "sha256": "526d339f4c2907032ba0f3d6b8fbc6933dd9d912d6189b3d5292c9650848d259",
+    "created_at": "2026-10-11T11:35:11+00:00",
+    "filename": "girl.png",
+    "detection_status": "low_confidence",
+    "detector_version": "hybrid-1.0 (classical + YOLOX-nano + GrabCut)",
+    "detected_at": "2026-10-11T11:35:11+00:00",
+    "route": "flat-background",
+    "detection_message": "",
+    "detection_ms": 141.1,
+    "dominant_colors": [
+      "purple",
+      "peach",
+      "pink",
+      "yellow"
+    ],
+    "object_count": 1,
+    "provenance": null
+  },
+  "user": {
+    "display_name": "girl",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 1,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "611f30488f",
+      "image_id": "f165f0a4d0",
+      "label": "girl",
+      "color": "purple/pink",
+      "confidence": 0.58,
+      "bbox": [
+        136,
+        51,
+        240,
+        635
+      ],
+      "origin": "auto",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": {
+        "label": "girl",
+        "color": "purple/pink",
+        "confidence": 0.58,
+        "bbox": [
+          136,
+          51,
+          240,
+          635
+        ]
+      },
+      "reviewed": false,
+      "needs_review": true,
+      "deleted": false,
+      "attrs": {
+        "kind": "cartoon person",
+        "clothing": {
+          "top": "purple",
+          "bottom": "pink",
+          "shoes": "red"
+        },
+        "skin": "peach",
+        "hair": "yellow",
+        "silhouette_flare": 1.19
+      },
+      "evidence": [
+        "figure rule: round skin-tone head at top with clothing regions below -> cartoon person",
+        "silhouette flare ratio 1.19 (skirt/dress) -> 'girl' (cartoon-convention heuristic, low certainty - verify)"
+      ],
+      "mask_source": "detector",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:11+00:00",
+      "updated_at": "2026-10-11T11:35:11+00:00"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "4cdb753feb",
+  "kind": "source",
+  "auto": {
+    "width": 400,
+    "height": 400,
+    "format": "png",
+    "bytes": 191239,
+    "sha256": "7274ffa00820ef94ceb8bf7f48a926b020adc408b6c7e72ec024db06af9e185c",
+    "created_at": "2026-10-11T11:35:14+00:00",
+    "filename": "blank.png",
+    "detection_status": "no_objects",
+    "detector_version": "hybrid-1.0 (classical + YOLOX-nano + GrabCut)",
+    "detected_at": "2026-10-11T11:35:14+00:00",
+    "route": "flat-background -> neural second opinion",
+    "detection_message": "Nothing stands out from the background (object may be too faint or absent).",
+    "detection_ms": 81.3,
+    "dominant_colors": [
+      "white"
+    ],
+    "object_count": 0,
+    "provenance": null
+  },
+  "user": {
+    "display_name": "blank",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": []
+}

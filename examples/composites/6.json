@@ -1,0 +1,226 @@
+{
+  "id": "ae6b8b7315",
+  "kind": "composite",
+  "auto": {
+    "width": 1024,
+    "height": 768,
+    "format": "png",
+    "bytes": 244036,
+    "sha256": "c888ba5d434671aa3ea33645e925f89e9c955bc7af850ac757cb3e385c50ef7a",
+    "created_at": "2026-10-11T11:35:17+00:00",
+    "filename": null,
+    "detection_status": "composed",
+    "detector_version": "composition-plan",
+    "detected_at": "2026-10-11T11:35:17+00:00",
+    "route": "composition",
+    "detection_message": "objects registered from the composition plan (not detected)",
+    "detection_ms": null,
+    "dominant_colors": [],
+    "object_count": 2,
+    "provenance": {
+      "instruction": "an orange above a red apple on a transparent background",
+      "plan": {
+        "instruction": "an orange above a red apple on a transparent background",
+        "canvas": {
+          "background": "transparent"
+        },
+        "warnings": [],
+        "planner": "rules",
+        "items": [
+          {
+            "id": "i1",
+            "text": "an orange",
+            "label": "orange",
+            "count": 1,
+            "color": null,
+            "size": 1.0,
+            "anchor": null,
+            "group": false,
+            "relation_to_previous": "adjacent"
+          },
+          {
+            "id": "i2",
+            "text": "a red apple",
+            "label": "apple",
+            "count": 1,
+            "color": "red",
+            "size": 1.0,
+            "anchor": null,
+            "group": false,
+            "relation_to_previous": "above"
+          }
+        ],
+        "resolved": [
+          {
+            "item": "i1",
+            "assets": [
+              {
+                "object_id": "3b70ac235c",
+                "image_id": "4abe9013fe",
+                "image_name": "orange",
+                "label": "orange",
+                "color": "orange",
+                "confidence": 0.93,
+                "origin": "auto"
+              }
+            ]
+          },
+          {
+            "item": "i2",
+            "assets": [
+              {
+                "object_id": "dc2778c4b1",
+                "image_id": "3d02a19198",
+                "image_name": "apple_orange",
+                "label": "apple",
+                "color": "red",
+                "confidence": 0.92,
+                "origin": "auto"
+              }
+            ]
+          }
+        ],
+        "missing": [],
+        "suggestions": {}
+      },
+      "placements": [
+        {
+          "item_id": "i1",
+          "asset_object_id": "3b70ac235c",
+          "asset_image_id": "4abe9013fe",
+          "asset_image_name": "orange",
+          "label": "orange",
+          "color": "orange",
+          "bbox": [
+            365,
+            77,
+            295,
+            295
+          ],
+          "z": 0.0,
+          "scale": 0.977
+        },
+        {
+          "item_id": "i2",
+          "asset_object_id": "dc2778c4b1",
+          "asset_image_id": "3d02a19198",
+          "asset_image_name": "apple_orange",
+          "label": "apple",
+          "color": "red",
+          "bbox": [
+            370,
+            396,
+            285,
+            295
+          ],
+          "z": 1.0,
+          "scale": 1.011
+        }
+      ],
+      "canvas": {
+        "width": 1024,
+        "height": 768,
+        "background": "transparent"
+      },
+      "assets": [
+        {
+          "image_id": "3d02a19198",
+          "image_name": "apple_orange"
+        },
+        {
+          "image_id": "4abe9013fe",
+          "image_name": "orange"
+        }
+      ],
+      "planner": "rules"
+    }
+  },
+  "user": {
+    "display_name": "composite: an orange above a red apple on a transparent bac\u2026",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "985cfda8cc",
+      "image_id": "ae6b8b7315",
+      "label": "orange",
+      "color": "orange",
+      "confidence": 1.0,
+      "bbox": [
+        365,
+        77,
+        295,
+        295
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "4abe9013fe",
+        "asset_object_id": "3b70ac235c",
+        "asset_image_name": "orange",
+        "z": 0.0,
+        "scale": 0.977
+      },
+      "evidence": [
+        "pasted from 'orange' (object 3b70ac235c)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:17+00:00",
+      "updated_at": "2026-10-11T11:35:17+00:00"
+    },
+    {
+      "id": "371522a0b2",
+      "image_id": "ae6b8b7315",
+      "label": "apple",
+      "color": "red",
+      "confidence": 1.0,
+      "bbox": [
+        370,
+        396,
+        285,
+        295
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "3d02a19198",
+        "asset_object_id": "dc2778c4b1",
+        "asset_image_name": "apple_orange",
+        "z": 1.0,
+        "scale": 1.011
+      },
+      "evidence": [
+        "pasted from 'apple_orange' (object dc2778c4b1)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:17+00:00",
+      "updated_at": "2026-10-11T11:35:17+00:00"
+    }
+  ]
+}

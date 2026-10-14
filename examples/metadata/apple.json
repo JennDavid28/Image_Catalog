@@ -1,0 +1,92 @@
+{
+  "id": "afd53f6a32",
+  "kind": "source",
+  "auto": {
+    "width": 512,
+    "height": 512,
+    "format": "png",
+    "bytes": 340093,
+    "sha256": "107d06387c6b55a0ec030e40566db8eba4c74bc50391c487214664d8d05547c1",
+    "created_at": "2026-10-11T11:35:10+00:00",
+    "filename": "apple.png",
+    "detection_status": "ok",
+    "detector_version": "hybrid-1.0 (classical + YOLOX-nano + GrabCut)",
+    "detected_at": "2026-10-11T11:35:10+00:00",
+    "route": "flat-background",
+    "detection_message": "",
+    "detection_ms": 277.5,
+    "dominant_colors": [
+      "red"
+    ],
+    "object_count": 1,
+    "provenance": null
+  },
+  "user": {
+    "display_name": "apple",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "eedd3bf81e",
+      "image_id": "afd53f6a32",
+      "label": "apple",
+      "color": "red",
+      "confidence": 0.87,
+      "bbox": [
+        105,
+        131,
+        302,
+        313
+      ],
+      "origin": "auto",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": {
+        "label": "apple",
+        "color": "red",
+        "confidence": 0.87,
+        "bbox": [
+          105,
+          131,
+          302,
+          313
+        ]
+      },
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "occluded": false,
+        "rgb": [
+          189,
+          36,
+          43
+        ],
+        "parts": [
+          "brown",
+          "green",
+          "pink"
+        ]
+      },
+      "evidence": [
+        "shaded/textured surface (Lab std 15.2)",
+        "round (hull circularity 0.97), red hue 358 deg",
+        "stem/leaf-coloured parts attached"
+      ],
+      "mask_source": "detector",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:10+00:00",
+      "updated_at": "2026-10-11T11:35:10+00:00"
+    }
+  ]
+}

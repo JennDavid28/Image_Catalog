@@ -1,0 +1,498 @@
+{
+  "id": "48a952f960",
+  "kind": "composite",
+  "auto": {
+    "width": 1024,
+    "height": 768,
+    "format": "png",
+    "bytes": 279985,
+    "sha256": "a0205a44837832766fb8f25adf5eddca9e9cdcc7b7b1b73c26c78d9e0d0c5e71",
+    "created_at": "2026-10-11T11:35:16+00:00",
+    "filename": null,
+    "detection_status": "composed",
+    "detector_version": "composition-plan",
+    "detected_at": "2026-10-11T11:35:16+00:00",
+    "route": "composition",
+    "detection_message": "objects registered from the composition plan (not detected)",
+    "detection_ms": null,
+    "dominant_colors": [],
+    "object_count": 6,
+    "provenance": {
+      "instruction": "Generate a composite containing a boy, a girl, and colored shapes",
+      "plan": {
+        "instruction": "Generate a composite containing a boy, a girl, and colored shapes",
+        "canvas": {
+          "background": "white"
+        },
+        "warnings": [],
+        "planner": "rules",
+        "items": [
+          {
+            "id": "i1",
+            "text": "a boy",
+            "label": "boy",
+            "count": 1,
+            "color": null,
+            "size": 1.0,
+            "anchor": null,
+            "group": false,
+            "relation_to_previous": "adjacent"
+          },
+          {
+            "id": "i2",
+            "text": "a girl",
+            "label": "girl",
+            "count": 1,
+            "color": null,
+            "size": 1.0,
+            "anchor": null,
+            "group": false,
+            "relation_to_previous": "adjacent"
+          },
+          {
+            "id": "i3",
+            "text": "colored shapes",
+            "label": "shape",
+            "count": 1,
+            "color": null,
+            "size": 1.0,
+            "anchor": null,
+            "group": true,
+            "relation_to_previous": "adjacent"
+          }
+        ],
+        "resolved": [
+          {
+            "item": "i1",
+            "assets": [
+              {
+                "object_id": "1ba537a73c",
+                "image_id": "12fdc23014",
+                "image_name": "boy",
+                "label": "boy",
+                "color": "green/blue",
+                "confidence": 0.58,
+                "origin": "auto"
+              }
+            ]
+          },
+          {
+            "item": "i2",
+            "assets": [
+              {
+                "object_id": "611f30488f",
+                "image_id": "f165f0a4d0",
+                "image_name": "girl",
+                "label": "girl",
+                "color": "purple/pink",
+                "confidence": 0.58,
+                "origin": "auto"
+              }
+            ]
+          },
+          {
+            "item": "i3",
+            "assets": [
+              {
+                "object_id": "53f13c5037",
+                "image_id": "d71720ee5d",
+                "image_name": "shapes",
+                "label": "circle",
+                "color": "red",
+                "confidence": 0.95,
+                "origin": "auto"
+              },
+              {
+                "object_id": "ad3a25cf23",
+                "image_id": "d71720ee5d",
+                "image_name": "shapes",
+                "label": "square",
+                "color": "blue",
+                "confidence": 0.95,
+                "origin": "auto"
+              },
+              {
+                "object_id": "38078e85fc",
+                "image_id": "d71720ee5d",
+                "image_name": "shapes",
+                "label": "triangle",
+                "color": "green",
+                "confidence": 0.95,
+                "origin": "auto"
+              },
+              {
+                "object_id": "6eb1db4199",
+                "image_id": "d71720ee5d",
+                "image_name": "shapes",
+                "label": "rectangle",
+                "color": "yellow",
+                "confidence": 0.95,
+                "origin": "auto"
+              }
+            ]
+          }
+        ],
+        "missing": [],
+        "suggestions": {}
+      },
+      "placements": [
+        {
+          "item_id": "i1",
+          "asset_object_id": "1ba537a73c",
+          "asset_image_id": "12fdc23014",
+          "asset_image_name": "boy",
+          "label": "boy",
+          "color": "green/blue",
+          "bbox": [
+            102,
+            124,
+            172,
+            519
+          ],
+          "z": 0.0,
+          "scale": 0.823
+        },
+        {
+          "item_id": "i2",
+          "asset_object_id": "611f30488f",
+          "asset_image_id": "f165f0a4d0",
+          "asset_image_name": "girl",
+          "label": "girl",
+          "color": "purple/pink",
+          "bbox": [
+            307,
+            124,
+            196,
+            519
+          ],
+          "z": 1.0,
+          "scale": 0.817
+        },
+        {
+          "item_id": "i3",
+          "asset_object_id": "53f13c5037",
+          "asset_image_id": "d71720ee5d",
+          "asset_image_name": "shapes",
+          "label": "circle",
+          "color": "red",
+          "bbox": [
+            539,
+            352,
+            137,
+            137
+          ],
+          "z": 2.0,
+          "scale": 0.714
+        },
+        {
+          "item_id": "i3",
+          "asset_object_id": "ad3a25cf23",
+          "asset_image_id": "d71720ee5d",
+          "asset_image_name": "shapes",
+          "label": "square",
+          "color": "blue",
+          "bbox": [
+            741,
+            352,
+            137,
+            137
+          ],
+          "z": 2.0,
+          "scale": 0.71
+        },
+        {
+          "item_id": "i3",
+          "asset_object_id": "38078e85fc",
+          "asset_image_id": "d71720ee5d",
+          "asset_image_name": "shapes",
+          "label": "triangle",
+          "color": "green",
+          "bbox": [
+            536,
+            507,
+            144,
+            137
+          ],
+          "z": 2.0,
+          "scale": 0.758
+        },
+        {
+          "item_id": "i3",
+          "asset_object_id": "6eb1db4199",
+          "asset_image_id": "d71720ee5d",
+          "asset_image_name": "shapes",
+          "label": "rectangle",
+          "color": "yellow",
+          "bbox": [
+            698,
+            507,
+            224,
+            137
+          ],
+          "z": 2.0,
+          "scale": 0.966
+        }
+      ],
+      "canvas": {
+        "width": 1024,
+        "height": 768,
+        "background": "white"
+      },
+      "assets": [
+        {
+          "image_id": "12fdc23014",
+          "image_name": "boy"
+        },
+        {
+          "image_id": "d71720ee5d",
+          "image_name": "shapes"
+        },
+        {
+          "image_id": "f165f0a4d0",
+          "image_name": "girl"
+        }
+      ],
+      "planner": "rules"
+    }
+  },
+  "user": {
+    "display_name": "composite: Generate a composite containing a boy, a girl, a\u2026",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "0b2daf4131",
+      "image_id": "48a952f960",
+      "label": "boy",
+      "color": "green/blue",
+      "confidence": 1.0,
+      "bbox": [
+        102,
+        124,
+        172,
+        519
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "12fdc23014",
+        "asset_object_id": "1ba537a73c",
+        "asset_image_name": "boy",
+        "z": 0.0,
+        "scale": 0.823
+      },
+      "evidence": [
+        "pasted from 'boy' (object 1ba537a73c)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    },
+    {
+      "id": "8f1dae48be",
+      "image_id": "48a952f960",
+      "label": "girl",
+      "color": "purple/pink",
+      "confidence": 1.0,
+      "bbox": [
+        307,
+        124,
+        196,
+        519
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "f165f0a4d0",
+        "asset_object_id": "611f30488f",
+        "asset_image_name": "girl",
+        "z": 1.0,
+        "scale": 0.817
+      },
+      "evidence": [
+        "pasted from 'girl' (object 611f30488f)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    },
+    {
+      "id": "6ca1f67b1c",
+      "image_id": "48a952f960",
+      "label": "circle",
+      "color": "red",
+      "confidence": 1.0,
+      "bbox": [
+        539,
+        352,
+        137,
+        137
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "d71720ee5d",
+        "asset_object_id": "53f13c5037",
+        "asset_image_name": "shapes",
+        "z": 2.0,
+        "scale": 0.714
+      },
+      "evidence": [
+        "pasted from 'shapes' (object 53f13c5037)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    },
+    {
+      "id": "e289f3d56c",
+      "image_id": "48a952f960",
+      "label": "square",
+      "color": "blue",
+      "confidence": 1.0,
+      "bbox": [
+        741,
+        352,
+        137,
+        137
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "d71720ee5d",
+        "asset_object_id": "ad3a25cf23",
+        "asset_image_name": "shapes",
+        "z": 2.0,
+        "scale": 0.71
+      },
+      "evidence": [
+        "pasted from 'shapes' (object ad3a25cf23)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    },
+    {
+      "id": "5de2a28bcf",
+      "image_id": "48a952f960",
+      "label": "triangle",
+      "color": "green",
+      "confidence": 1.0,
+      "bbox": [
+        536,
+        507,
+        144,
+        137
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "d71720ee5d",
+        "asset_object_id": "38078e85fc",
+        "asset_image_name": "shapes",
+        "z": 2.0,
+        "scale": 0.758
+      },
+      "evidence": [
+        "pasted from 'shapes' (object 38078e85fc)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    },
+    {
+      "id": "e27574aac5",
+      "image_id": "48a952f960",
+      "label": "rectangle",
+      "color": "yellow",
+      "confidence": 1.0,
+      "bbox": [
+        698,
+        507,
+        224,
+        137
+      ],
+      "origin": "composite",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": null,
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "asset_image_id": "d71720ee5d",
+        "asset_object_id": "6eb1db4199",
+        "asset_image_name": "shapes",
+        "z": 2.0,
+        "scale": 0.966
+      },
+      "evidence": [
+        "pasted from 'shapes' (object 6eb1db4199)"
+      ],
+      "mask_source": "none",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:16+00:00",
+      "updated_at": "2026-10-11T11:35:16+00:00"
+    }
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "id": "4abe9013fe",
+  "kind": "source",
+  "auto": {
+    "width": 512,
+    "height": 512,
+    "format": "png",
+    "bytes": 337366,
+    "sha256": "561da0bfe7edd52a4bcd589f996dd62655ec722f63d196423050b209debfc7b7",
+    "created_at": "2026-10-11T11:35:10+00:00",
+    "filename": "orange.png",
+    "detection_status": "ok",
+    "detector_version": "hybrid-1.0 (classical + YOLOX-nano + GrabCut)",
+    "detected_at": "2026-10-11T11:35:11+00:00",
+    "route": "flat-background",
+    "detection_message": "",
+    "detection_ms": 137.5,
+    "dominant_colors": [
+      "orange"
+    ],
+    "object_count": 1,
+    "provenance": null
+  },
+  "user": {
+    "display_name": "orange",
+    "description": "",
+    "tags": []
+  },
+  "summary": {
+    "needs_review": 0,
+    "manually_corrected": false,
+    "deleted_objects": 0
+  },
+  "objects": [
+    {
+      "id": "3b70ac235c",
+      "image_id": "4abe9013fe",
+      "label": "orange",
+      "color": "orange",
+      "confidence": 0.93,
+      "bbox": [
+        105,
+        119,
+        302,
+        302
+      ],
+      "origin": "auto",
+      "field_source": {
+        "label": "auto",
+        "color": "auto",
+        "confidence": "auto",
+        "bbox": "auto"
+      },
+      "auto_values": {
+        "label": "orange",
+        "color": "orange",
+        "confidence": 0.93,
+        "bbox": [
+          105,
+          119,
+          302,
+          302
+        ]
+      },
+      "reviewed": false,
+      "needs_review": false,
+      "deleted": false,
+      "attrs": {
+        "occluded": false,
+        "rgb": [
+          237,
+          141,
+          24
+        ],
+        "neural_agrees": true
+      },
+      "evidence": [
+        "shaded/textured surface (Lab std 3.9)",
+        "round (hull circularity 1.00), orange hue 32 deg",
+        "YOLOX-nano independently agrees: 'orange' 0.90"
+      ],
+      "mask_source": "detector",
+      "edited": false,
+      "created_at": "2026-10-11T11:35:11+00:00",
+      "updated_at": "2026-10-11T11:35:11+00:00"
+    }
+  ]
+}
