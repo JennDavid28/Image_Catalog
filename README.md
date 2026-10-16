@@ -46,6 +46,67 @@ The central constraint is that the default **Assets** composition mode uses cata
 - **Pure AI:** generate a complete image from a prompt. The generated image is saved to the catalog and detection is run on it.
 - Optional Gemini-assisted prompt planning can identify objects, counts, colors, positions, relationships, and generation mode. The deterministic parser remains available without a Gemini key.
 
+## Architecture and end-to-end pipeline
+
+The application is a local web app with a single-page browser UI, a FastAPI service layer, and a catalog service backed by SQLite metadata plus image and mask files on disk. API requests are scoped to the authenticated user. The detector, planner, image generator, and editing operations are separate modules called by the API and composition workflow.
+
+```mermaid
+flowchart TD
+    U[User in browser UI] -->|login and catalog requests| API[FastAPI API and auth middleware]
+    API --> CAT[Catalog service]
+    CAT --> DB[(SQLite metadata, objects, provenance, audit events)]
+    CAT --> FS[(Image and mask files)]
+
+    U -->|upload image| API
+    API --> UP[Validate and store original image]
+    UP --> DET[Detection router]
+    DET -->|flat illustrations| CV[OpenCV color and geometry rules]
+    DET -->|photo proposals| YX[YOLOX-nano ONNX]
+    DET -->|open-vocabulary proposals, when enabled| YW[YOLO-World v2]
+    DET -->|extra-label proposals, optional| OWL[OWLv2]
+    CV --> SEG[Mask generation and segmentation]
+    YX --> SEG
+    YW --> SEG
+    OWL --> SEG
+    SEG --> META[Labels, color, confidence, boxes, masks, route, timing]
+    META --> CAT
+
+    U -->|natural-language instruction| API
+    API --> PLAN[Prompt planner]
+    PLAN -->|optional LLM planning| GEM[Gemini Flash via GEMINI_MODEL]
+    PLAN -->|no key or fallback| RULES[Deterministic prompt parser]
+    GEM --> STRUCT[Structured plan: objects, counts, colors, relations, positions, mode]
+    RULES --> STRUCT
+    STRUCT --> RESOLVE[Resolve requested objects to source catalog assets]
+    CAT --> RESOLVE
+    RESOLVE -->|Assets mode: catalog pixels only| LAYOUT[Cut out, scale, position and layer assets]
+    LAYOUT --> SAVE[Save composite and provenance as a catalog entry]
+    STRUCT -->|Hybrid or Pure AI mode| GEN[Image generation service]
+    GEN -->|try configured Google image models| GIMG[Gemini image models / Imagen fallback]
+    GEN -->|if Google generation fails| POL[Pollinations]
+    GEN -->|if remote providers fail| LOCAL[Local procedural synthesizer]
+    GIMG --> GENOUT[Generated image or background]
+    POL --> GENOUT
+    LOCAL --> GENOUT
+    GENOUT --> SAVE
+    SAVE -->|generated image detection where enabled| DET
+
+    U -->|manual corrections and image edits| API
+    API --> EDIT[Edit objects or image pixels]
+    EDIT -->|record user provenance and audit event| CAT
+```
+
+### What happens in each pipeline
+
+1. **Upload and cataloging:** The API validates an uploaded image, stores its original bytes, and creates metadata. A new upload normally starts detection automatically.
+2. **Detection:** The router distinguishes flat backgrounds from complex backgrounds. Classical OpenCV rules are suited to clean illustrations; YOLOX-nano provides common object proposals for photos. YOLO-World adds text-prompted proposals when installed, and OWLv2 is an optional proposal source for explicit extra labels. Segmentation produces masks, while the catalog records labels, colors, confidence, boxes, detector route, and timing.
+3. **Human review:** Users can draw or edit detections and update metadata. Each field tracks whether it came from the detector or the user. Re-detection is explicit: `preserve_manual` refreshes untouched automatic results and retains user work; `replace_all` intentionally replaces the current detections. Changes are recorded in the audit log.
+4. **Prompt understanding:** The prompt planner extracts objects, quantities, colors, positions, and relationships into a structured plan. Gemini Flash can improve interpretation when configured; deterministic parsing is the fallback. Model selection is intended to come from `GEMINI_MODEL`; the code fallback is `gemini-2.5-flash`.
+5. **Asset resolution and composition:** The resolver matches requested items against source-image detections and user corrections. Assets mode cuts out those catalog objects, scales and positions them, and saves the rendered composition as a new catalog entry with plan/provenance metadata. Missing required assets are reported rather than replaced with generated approximations.
+6. **Optional generation modes:** Hybrid mode may use generated background or missing scene elements alongside catalog assets; Pure AI creates a complete image. These modes use a separate image-generation service, which tries Google image models first, then Pollinations, then a local procedural synthesizer. Generated results are saved to the catalog and detection is run on them.
+
+**Architecture trade-offs:** Classical rules are quick and explainable on clean drawings, but do not generalize to every photo. Neural and open-vocabulary models broaden coverage but add latency, dependencies, and possible false detections. Gemini can interpret freer language but requires a working API key/model; the local parser is available as a fallback but is less flexible. Assets mode is predictable and preserves the assignment's existing-asset requirement; Hybrid and Pure AI are more flexible but synthesize pixels and may depend on remote services.
+
 ## Models and where they are used
 
 | Model or method | Used for | Why it is included | Availability |
@@ -54,7 +115,7 @@ The central constraint is that the default **Assets** composition mode uses cata
 | **YOLOX-nano** (COCO, 80 classes; ONNX) | Fast neural proposals and corroboration, mainly for photographs | Small model that runs through OpenCV DNN without PyTorch or a GPU; adds common real-world object classes | `models/yolox_nano.onnx` is included in this checkout; run `python scripts/fetch_assets.py` if it is missing |
 | **YOLO-World v2** (default `yolov8s-worldv2.pt`) | Queried during normal detection when Ultralytics is installed; supplies open-vocabulary proposals alongside YOLOX on complex-background images | Text-promptable detector can search for concepts beyond COCO's fixed 80 classes; the UI reports when it was queried | Model file is present at the repository root. Requires `ultralytics`; can be disabled with `YOLOWORLD=off` or changed with `YOLOWORLD_MODEL`. First use may install Ultralytics' CLIP dependency and require an app restart |
 | **OWLv2** (`google/owlv2-base-patch16-ensemble`) | Optional text-guided proposal source when extra labels are supplied, and in benchmarking | Offers a separate open-vocabulary detector implementation for user-supplied concepts | Optional; requires `torch` and `transformers`. Weights may be downloaded on first use or configured with `OPENVOCAB_MODEL`; disable with `OPENVOCAB=off` |
-| **Gemini Flash** (planner default `gemini-2.5-flash`) | Optional natural-language planning and interpretation | Turns freer instructions into a structured plan; the Assets resolver still validates every requested object against the catalog | Requires `google-genai` and `GEMINI_API_KEY` (or `GOOGLE_API_KEY`). Local parsing is used when unavailable |
+| **Gemini Flash** (selected with `GEMINI_MODEL`; code fallback `gemini-2.5-flash`) | Optional natural-language planning and interpretation | Turns freer instructions into a structured plan; the Assets resolver still validates every requested object against the catalog | Requires `google-genai` and `GEMINI_API_KEY` (or `GOOGLE_API_KEY`). Local parsing is used when unavailable |
 | **Gemini image models** (`gemini-3.1-flash-image`, `gemini-2.5-flash-image`, `gemini-3-pro-image`; then Imagen 3 fallback) | Pure AI and supported hybrid generation | Creates new scene pixels when the user chooses a generation mode that allows them | Requires the Google GenAI SDK and a working API key/model entitlement |
 | **Pollinations Flux** | Secondary image-generation fallback | Gives the generator another remote provider attempt if Google image generation fails | Uses network access; no local model installation |
 | Local semantic raster synthesizer | Final image-generation fallback | Keeps the generation flow usable without a successful remote provider | Pillow/OpenCV procedural drawing; not equivalent to a general-purpose diffusion model |
