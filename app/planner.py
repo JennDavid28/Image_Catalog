@@ -18,7 +18,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-DEFAULT_GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+# Keep the fallback stable, but resolve GEMINI_MODEL at call time so values
+# loaded from the local .env file are visible to the planner.
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
 
 SYSTEM_PROMPT = """You are an expert AI Composition & Image Generation Planner for an Image Catalog system.
 Your job is to interpret user natural-language prompts and create a structured JSON plan.
@@ -100,19 +102,27 @@ def _get_api_key() -> Optional[str]:
     )
 
 
-def _call_gemini_flash(prompt: str, api_key: str, model_name: str = DEFAULT_GEMINI_MODEL) -> str:
-    """Call Google Gemini Flash via modern google-genai SDK."""
+def get_gemini_model() -> str:
+    """Return the configured planner model after loading local environment settings."""
+    _load_env_file()
+    return os.environ.get("GEMINI_MODEL") or DEFAULT_GEMINI_MODEL
+
+
+def _call_gemini_flash(prompt: str, api_key: str, model_name: Optional[str] = None) -> tuple[str, str]:
+    """Call Gemini Flash and return both response text and the model that answered."""
     from google import genai
     client = genai.Client(api_key=api_key)
 
-    for m in [model_name, "gemini-2.5-flash", "gemini-1.5-flash"]:
+    requested_model = model_name or get_gemini_model()
+    model_candidates = list(dict.fromkeys([requested_model, "gemini-2.5-flash", "gemini-1.5-flash"]))
+    for m in model_candidates:
         try:
             response = client.models.generate_content(
                 model=m,
                 contents=prompt,
             )
             if response and response.text:
-                return response.text
+                return response.text, m
         except Exception:
             continue
 
@@ -228,20 +238,21 @@ def parse_prompt_heuristic(instruction: str, catalog=None, user_id: str | None =
     }
 
 
-def plan_prompt(instruction: str, catalog=None, model_name: str = DEFAULT_GEMINI_MODEL, api_key: Optional[str] = None,
+def plan_prompt(instruction: str, catalog=None, model_name: Optional[str] = None, api_key: Optional[str] = None,
                 user_id: str | None = None) -> dict:
     """Main entrypoint: interpret prompt into structured plan using Gemini Flash or heuristic fallback."""
+    selected_model = model_name or get_gemini_model()
     key = api_key or _get_api_key()
     catalog_summary = format_catalog_summary(catalog, user_id)
 
     if key:
         full_prompt = SYSTEM_PROMPT.format(catalog_assets=catalog_summary) + f"\n\nUser Request: {instruction}\nJSON Response:"
         try:
-            raw_text = _call_gemini_flash(full_prompt, key, model_name)
+            raw_text, actual_model = _call_gemini_flash(full_prompt, key, selected_model)
             m = re.search(r"\{.*\}", raw_text, re.DOTALL)
             if m:
                 data = json.loads(m.group(0))
-                data["_planner"] = f"gemini ({model_name})"
+                data["_planner"] = f"gemini ({actual_model})"
                 data.setdefault("generation_mode", "assets_only")
                 data.setdefault("clarification_needed", False)
                 data.setdefault("canvas", {"width": 1024, "height": 768, "background_type": "color", "background_value": "white"})

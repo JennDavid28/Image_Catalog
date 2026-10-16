@@ -544,6 +544,7 @@ def plan(catalog, instruction: str, llm: bool = False, mode: str | None = None, 
         "canvas": parsed["canvas"],
         "warnings": parsed["warnings"],
         "planner": "llm" if (llm and parsed.get("_llm")) else ("intelligent_planner" if llm_info else "rules"),
+        "planner_model": parsed.get("_planner") or llm_info.get("_planner"),
         "explanation": llm_info.get("explanation", ""),
         "clarification_needed": llm_info.get("clarification_needed", False),
         "clarification_question": llm_info.get("clarification_question"),
@@ -584,7 +585,8 @@ def compose(catalog, instruction: str, width: int = 1024, height: int = 768, bac
             "generation_mode": "ai_generated",
             "generator": gen_meta,
             "canvas": {"width": width, "height": height, "style": ai_style},
-            "planner": p["planner"]
+            "planner": p["planner"],
+            "planner_model": p.get("planner_model")
         }
         # Add generated image to catalog and run automatic detection
         img = catalog.add_image(png, name or _auto_name(instruction), detect=True, kind="composite", provenance=provenance, user_id=user_id)
@@ -613,7 +615,8 @@ def compose(catalog, instruction: str, width: int = 1024, height: int = 768, bac
                 "notice": "No catalog assets matched; synthesized entire scene using AI",
                 "generator": gen_meta,
                 "canvas": {"width": width, "height": height, "style": ai_style},
-                "planner": p["planner"]
+                "planner": p["planner"],
+                "planner_model": p.get("planner_model")
             }
             img = catalog.add_image(png, name or _auto_name(instruction), detect=True, kind="composite", provenance=provenance, user_id=user_id)
             return {
@@ -654,7 +657,8 @@ def compose(catalog, instruction: str, width: int = 1024, height: int = 768, bac
             "ai_background": bg_meta,
             "canvas": {"width": width, "height": height, "style": ai_style},
             "assets": [{"image_id": i, "image_name": n} for i, n in assets],
-            "planner": p["planner"]
+            "planner": p["planner"],
+            "planner_model": p.get("planner_model")
         }
         img = catalog.add_composite(png, name or _auto_name(instruction), provenance, placements, user_id=user_id)
         warnings = list(p["warnings"])
@@ -681,7 +685,8 @@ def compose(catalog, instruction: str, width: int = 1024, height: int = 768, bac
     assets = sorted({(pl["asset_image_id"], pl["asset_image_name"]) for pl in placements})
     provenance = {"instruction": instruction, "generation_mode": "assets_only", "plan": public, "placements": placements,
                   "canvas": {"width": width, "height": height, "background": bgname},
-                  "assets": [{"image_id": i, "image_name": n} for i, n in assets], "planner": p["planner"]}
+                  "assets": [{"image_id": i, "image_name": n} for i, n in assets], "planner": p["planner"],
+                  "planner_model": p.get("planner_model")}
     img = catalog.add_composite(png, name or _auto_name(instruction), provenance, placements, user_id=user_id)
     return {"image": img, "plan": public, "placements": placements, "warnings": p["warnings"] + (["partial: " + m for m in p["missing"]] if p["missing"] else []), "mode": "assets_only", "generation_mode": "assets_only"}
 
@@ -703,7 +708,8 @@ Request: {request}"""
 # In compose.py
 def llm_plan(instruction: str, catalog, transport=None, user_id: str | None = None):
     """Uses Gemini instead of Anthropic for optional LLM scene planning."""
-    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    from .planner import _call_gemini_flash, _get_api_key, get_gemini_model
+    key = _get_api_key()
     if transport is None and not key:
         fallback = parse_instruction(instruction)
         fallback["_llm"] = False
@@ -716,15 +722,12 @@ def llm_plan(instruction: str, catalog, transport=None, user_id: str | None = No
         if transport is not None:
             text = transport(prompt)
         else:
-            from google import genai
-            client = genai.Client(api_key=key)
-            response = client.models.generate_content(
-                model=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
-                contents=prompt,
-            )
-            text = response.text
+            text, actual_model = _call_gemini_flash(prompt, key, get_gemini_model())
         data = json.loads(text[text.index("{"): text.rindex("}") + 1])
-        return validate_llm_plan(data)
+        parsed = validate_llm_plan(data)
+        if transport is None:
+            parsed["_planner"] = f"gemini ({actual_model})"
+        return parsed
     except Exception:
         return None
 

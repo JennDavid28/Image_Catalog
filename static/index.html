@@ -3455,6 +3455,7 @@
     <span class="mode-badge ${p.mode === 'hybrid' ? 'm2' : p.mode === 'ai_generated' ? 'm3' : 'm1'}">
       ${p.mode === 'hybrid' ? 'MODE 2: HYBRID (ASSETS + AI SCENE)' : p.mode === 'ai_generated' ? 'MODE 3: PURE AI GENERATED' : 'MODE 1: EXISTING ASSETS ONLY'}
     </span>
+    <small class="hint">${p.planner_model ? `Prompt planner: ${esc(p.planner_model)}` : `Prompt parsing: ${esc(p.planner || 'rules')}`}</small>
   </div>`;
 
       if (p.mode === "ai_generated") {

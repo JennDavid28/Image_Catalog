@@ -340,7 +340,9 @@ def create_app(data_dir: str | Path | None = None) -> FastAPI:
     @app.post("/api/planner/interpret")
     def planner_interpret(body: InterpretReq, req: Request):
         from .planner import plan_prompt
-        p = plan_prompt(body.instruction, cat, model_name=body.model_name or "gemini-2.5-flash", user_id=req.state.user["id"])
+        # Let plan_prompt resolve GEMINI_MODEL from process settings or .env
+        # unless this request explicitly asks for a particular model.
+        p = plan_prompt(body.instruction, cat, model_name=body.model_name, user_id=req.state.user["id"])
         return {"plan": p, **p}
 
     @app.post("/api/generator/generate", status_code=201)
